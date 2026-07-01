@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Replicating Soft-TAC on LunarLander - Pragnesh Bagary</title>
+  <meta name="description" content="A from-scratch reimplementation testing whether a tanh-based Soft-TAC loss degrades more gracefully than cross-entropy under label noise.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-subtle: #f7f8fa;
+      --text: #1a2231;
+      --text-muted: #4b5566;
+      --text-soft: #94a3b8;
+      --accent: #2563eb;
+      --accent-soft: #eff4ff;
+      --border: #e8eaee;
+      --border-strong: #d9dce2;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.82); backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
+      border-bottom: 1px solid var(--border); height: 62px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 max(1.5rem, calc((100% - 720px) / 2 + 1.5rem));
+    }
+    .nav-name { font-weight: 700; font-size: .95rem; color: var(--text); text-decoration: none; }
+    .nav-links { list-style: none; display: flex; gap: 1.8rem; }
+    .nav-links a { font-size: .875rem; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: color .15s; }
+    .nav-links a:hover { color: var(--accent); }
+
+    /* Reading progress */
+    #progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--accent); z-index: 200; transition: width .1s linear; }
+
+    .article { max-width: 720px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* Header */
+    .post-head { padding: 3.5rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2.5rem; }
+    .post-meta { font-family: var(--mono); font-size: .75rem; color: var(--text-soft); display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.1rem; }
+    .post-meta .tag { color: var(--accent); }
+    .post-title { font-size: clamp(2rem, 5vw, 2.9rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+    .post-standfirst { font-family: var(--serif); font-size: 1.2rem; color: var(--text-muted); line-height: 1.6; margin-top: 1.1rem; }
+
+    /* Prose */
+    .prose { font-family: var(--serif); font-size: 1.18rem; line-height: 1.75; color: var(--text); }
+    .prose p { margin-bottom: 1.4rem; }
+    .prose h2 {
+      font-family: var(--font); font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em;
+      color: var(--text); margin: 2.8rem 0 1.1rem; padding-top: .4rem;
+      line-height: 1.35;
+    }
+    .prose h2::before { content: '# '; color: var(--accent); font-family: var(--mono); font-weight: 500; font-size: .9em; }
+    .prose strong { font-weight: 600; }
+    .prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+    .prose a:hover { text-decoration-thickness: 2px; }
+    .prose code, .var { font-family: var(--mono); font-size: .82em; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 4px; padding: .08rem .32rem; color: var(--text); }
+    .prose ul { margin: 0 0 1.4rem 1.3rem; }
+    .prose li { margin-bottom: .5rem; }
+
+    .callout {
+      font-family: var(--font); font-size: .98rem; line-height: 1.65;
+      background: var(--accent-soft); border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0; padding: 1.1rem 1.3rem; margin: 2rem 0; color: var(--text-muted);
+    }
+
+    /* References */
+    .refs { font-family: var(--font); border-top: 1px solid var(--border); margin-top: 3.5rem; padding: 2.5rem 0 1rem; }
+    .refs h2 { font-size: .8rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); margin-bottom: 1.2rem; }
+    .refs p { font-size: .9rem; color: var(--text-muted); line-height: 1.65; margin-bottom: 1rem; }
+    .refs a { color: var(--accent); text-decoration: none; word-break: break-word; }
+    .refs a:hover { text-decoration: underline; }
+
+    /* Post footer */
+    .post-foot { border-top: 1px solid var(--border); margin-top: 1rem; padding: 2rem 0 4rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .post-foot a { font-size: .88rem; font-weight: 600; color: var(--accent); text-decoration: none; }
+    .post-foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 560px) {
+      .nav-links { gap: 1.1rem; }
+      .prose { font-size: 1.1rem; }
+      .post-standfirst { font-size: 1.08rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <a href="../index.html" class="nav-name">Pragnesh Bagary</a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="../resume.html">Resume</a></li>
+    <li><a href="index.html">Blog</a></li>
+  </ul>
+</nav>
+
+<article class="article">
+
+  <header class="post-head">
+    <div class="post-meta">
+      <span class="tag">reinforcement learning</span>
+      <span>2026</span>
+      <span>Replication study</span>
+    </div>
+    <h1 class="post-title">Replicating Soft-TAC: a reward-learning experiment on LunarLander</h1>
+    <p class="post-standfirst">Reimplementing a 2026 RL paper's central claim from scratch - that a tanh-based loss degrades more gracefully than cross-entropy under label noise - and watching which results survived a second look.</p>
+  </header>
+
+  <div class="prose">
+
+    <p>
+      I came across "Towards Improving Reward Design in RL" (Muslimani et al., 2025) and its follow-up,
+      "The Trajectory Alignment Coefficient in Two Acts" (Muslimani et al., 2026). Both center on a metric
+      called the Trajectory Alignment Coefficient (TAC), which measures how well a reward function matches
+      what a human actually wants. My first read left one thing unclear: is TAC computed for an agent, or for
+      a human? It's the latter. TAC is not a property of a policy's behavior. It is a diagnostic for a reward
+      function, checking whether the trajectory rankings that reward function induces match a human
+      stakeholder's own rankings. Once that distinction was clear, the rest of both papers followed more easily.
+    </p>
+    <p>
+      The second paper introduces Soft-TAC, a differentiable relaxation of TAC that can be used directly as a
+      training loss. It comes with a specific claim: its tanh-based loss saturates on confidently-wrong
+      preference pairs, so it should degrade more gracefully than a standard Cross-Entropy loss as label noise
+      increases. Rather than take that claim at face value, I reimplemented the paper's LunarLander experiment
+      from scratch to test it directly.
+    </p>
+
+    <h2>Building a synthetic ground truth</h2>
+    <p>
+      The original experiment requires a human to rate pairs of trajectories, which I don't have access to.
+      Instead, I used a fixed, hand-specified weight vector, <span class="var">w_star</span>, and scored each
+      trajectory as the dot product of <span class="var">w_star</span> and an 8-dimensional feature vector,
+      <span class="var">Phi</span> (progress toward the pad, change in speed, tilt, leg contact, engine usage,
+      crash, safe landing). Ranking trajectory pairs by that score produces preference labels in the same
+      format a human labeler would produce.
+    </p>
+    <p>
+      This looked like a compromise at first, but it's closer to an advantage: it gives me a ground truth to
+      check against. The original paper has no way to verify whether Soft-TAC recovered the true reward, since
+      the authors never had access to their human labeler's internal weights, only their preferences. Because I
+      constructed <span class="var">w_star</span> myself, I can measure recovery directly, which is a check the
+      original study could not perform.
+    </p>
+    <p>
+      I built the pipeline in stages and validated each one before moving to the next: the feature extractor
+      first (checked against a handful of manual transitions), then the rollout that sums features into a
+      per-episode <span class="var">Phi</span> vector, then the synthetic labeling step, then the Soft-TAC loss
+      in isolation, and only then the full training loop. Isolating each stage made it easier to localize
+      problems later, rather than debugging the whole pipeline at once.
+    </p>
+
+    <h2>An early dataset that could not have worked</h2>
+    <p>
+      The first version of the pipeline generated trajectories from a random policy. Training ran without
+      errors, but two of the eight features, <span class="var">crash</span> and <span class="var">safe_land</span>,
+      had zero variance across the dataset: a random policy never lands a LunarLander, and it either times out
+      or crashes.
+    </p>
+    <p>
+      This is a coverage problem, not a training problem. A feature with zero variance across the dataset gives
+      a preference-learning method nothing to key off of, so its weight is unrecoverable regardless of the loss
+      function used. The fix was a better dataset, not a better loss: I trained a DQN agent on LunarLander, saved
+      checkpoints at several points during training (early checkpoints crash reliably while late ones land
+      reliably), and rolled out episodes across that range of checkpoints so the final pool contained a real mix
+      of crashes and landings.
+    </p>
+
+    <h2>A quiet bug in the feature extractor</h2>
+    <p>
+      At one point I found a bug in the feature extractor: the "progress" feature was computing the next distance
+      to the pad using the current y-position instead of the next one, and the tilt-change feature was missing an
+      absolute value (tilt direction shouldn't matter, only distance from upright). Neither error produced a
+      visible failure. The pipeline ran end to end and the numbers looked plausible. They just measured something
+      slightly different from what was intended.
+    </p>
+    <div class="callout">
+      Bugs like this are the ones worth taking most seriously, since everything downstream - labeling, training,
+      and recovery - depends on the features being correct. An incorrect feature doesn't raise an error. It just
+      silently invalidates every result built on top of it. Fixing it required regenerating the dataset and
+      rerunning the full pipeline.
+    </div>
+
+    <h2>The noise sweep, and two results that didn't survive a second look</h2>
+    <p>
+      The core test of the paper's claim is a noise sweep: flip each preference label independently with
+      probability <span class="var">p</span>, retrain both losses from the same initialization, and measure how
+      recovery (cosine similarity to <span class="var">w_star</span>) degrades as <span class="var">p</span>
+      increases.
+    </p>
+    <p>
+      The first run of this sweep showed a small increase in Soft-TAC's recovery around
+      <span class="var">p = 0.10</span> before it continued to decline, an effect that would have made for an
+      appealing result on its own. Rather than report it, I reran the sweep with a disjoint set of seeds, and the
+      effect did not reappear. It was seed variance, not a property of the loss. The same happened with an
+      apparent crossover where Soft-TAC underperformed Cross-Entropy above <span class="var">p = 0.30</span>: it
+      also did not hold up under a different seed set. Both results would have been more interesting to report
+      than what actually held up, but neither was real.
+    </p>
+
+    <h2>Feature scale was distorting the headline result</h2>
+    <p>
+      While preparing this for publication, I re-examined the noise-sweep numbers and found that recovery looked
+      strong at <span class="var">p = 0</span> but Cross-Entropy in particular dropped sharply as soon as any
+      noise was introduced (from about 0.98 to 0.23 between <span class="var">p = 0</span> and
+      <span class="var">p = 0.05</span>).
+    </p>
+    <p>
+      The cause was feature scale, not the loss function itself. Two of the eight features, side-engine and
+      main-engine usage, are raw per-episode firing counts in the hundreds. The remaining features are order-1 or
+      binary. Even though <span class="var">w_star</span> assigns the engine features a small weight, their scale
+      means they account for roughly 98% of the variance in the labeling score, versus under 1% each for
+      <span class="var">crash</span> and <span class="var">safe_land</span>, which is the opposite of what
+      <span class="var">w_star</span> is meant to emphasize. Under label noise, gradient descent allocates more
+      effective step size to whichever feature has the largest raw scale, so noise is absorbed almost entirely by
+      the engine features rather than distributed across all of them. That is what produced the sharp collapse.
+    </p>
+    <p>
+      I addressed this by dividing each feature by its own standard deviation before labeling and training,
+      without subtracting the mean. Every label and every loss in this pipeline depends only on a difference
+      between two trajectories' features, so any constant subtracted from a feature cancels out of that
+      difference. Centering would not have changed the result and would have distorted the 0/1 meaning of the
+      binary features for no benefit. With this fix applied, the noise sweep changed substantially: both losses
+      settled to roughly 0.80 recovery across nearly the entire noise range, and the separation between them
+      largely disappeared.
+    </p>
+    <p>
+      This left a genuine tradeoff. The scaled version is the more principled setup, since it reflects what
+      <span class="var">w_star</span>'s weights are meant to express, but it also removes the effect I set out to
+      demonstrate. I chose to report the unscaled result as the primary finding, since it demonstrates the
+      paper's central claim about tanh saturation more clearly, and added an explicit note that the separation is
+      scale-dependent and does not survive standard feature normalization. I considered this preferable to
+      reporting a more defensible setup that obscures the effect being tested.
+    </p>
+
+    <h2>Checking whether 0.81 cosine similarity means anything</h2>
+    <p>
+      At one point during debugging, I had a recovery value around 0.81 and no good sense of whether that number
+      was meaningful. I checked it rather than guessing: cosine similarity between <span class="var">w_star</span>
+      and random 8-dimensional vectors averages around 0.29, so 0.81 is clearly not noise. I also checked whether
+      additional training would improve it further. It did not move substantially, since the model was already
+      classifying more than 99% of preference pairs correctly and had effectively solved the ranking task.
+      Examining feature correlations explained the gap: several features are moderately to strongly correlated
+      with each other (main-engine usage correlates at -0.86 with leg-contact state, for example), so more than
+      one reward direction can explain nearly the same set of preferences. That is a data-coverage limitation
+      rather than a training issue. More trajectories that break those correlations would likely help, whereas
+      more training epochs or a different loss would not.
+    </p>
+
+    <h2>A reproducibility issue worth noting</h2>
+    <p>
+      Regenerating the dataset at one point produced a different number of landings and crashes than the
+      committed dataset, despite using the same fixed random seed. DQN training in this setup is not
+      bit-for-bit reproducible across runs. The committed dataset file is fixed, so the analysis built on top of
+      it reproduces exactly. It is only regeneration from scratch that varies.
+    </p>
+
+    <h2>Open questions</h2>
+    <ul>
+      <li>Whether the unscaled result should be the one reported as primary, given that it does not survive
+        standardization. I made a choice here, and I do not think it is the only reasonable one.</li>
+      <li>How stable a single training run really is without seed averaging. Running the clean-label case with no
+        fixed seed 40 times gave a mean recovery of about 0.85 with a standard deviation of 0.15, and roughly one
+        in five runs landed below 0.70. The loss is non-convex enough that initialization matters more than
+        expected.</li>
+      <li>This is a replication of an existing claim, not new research. I believe it is an accurate one, but that
+        distinction is worth stating plainly.</li>
+    </ul>
+
+    <h2>A divergence from the paper's setup</h2>
+    <p>
+      The paper's own LunarLander study uses the continuous-action variant of the environment. This
+      implementation uses the discrete-action variant instead, since both the feature extractor and the DQN agent
+      depend on the action being one of a fixed set of integers. The comparison between the two losses does not
+      depend on this choice, since it only operates on the <span class="var">Phi</span> feature vectors, but it
+      is a real divergence from the paper's exact setup and worth stating directly.
+    </p>
+
+    <h2>Something I keep thinking about</h2>
+    <p>
+      One thing has stuck with me since reading the first paper: TAC collapses everything into a single alignment
+      number, one induced ranking of trajectories compared against one human ranking. I keep wondering whether
+      that collapse is actually necessary. My reward here is vector-valued, eight dimensions, and right now I only
+      ever compare it to <span class="var">w_star</span> as a whole, either as a single cosine similarity or as a
+      per-feature weight comparison. I haven't tried running the ranking-agreement computation independently per
+      reward dimension, but I want to: instead of one alignment number, I'd get a vector of them, an "alignment
+      fingerprint" that would tell me which specific objective is misaligned rather than just that something is.
+      My per-feature weight table is close to this in spirit, but it isn't the same computation, and I don't think
+      I can claim the fingerprint idea until I've actually run the ranking agreement per dimension rather than
+      comparing weights. I looked for this specific decomposition in the published work and didn't find it. But
+      it's a fairly small step from what's already there, and the field moves quickly, so I'd call this "I didn't
+      find it" rather than "it doesn't exist." Either way, it's the direction I'd pick up next if I kept going
+      with this.
+    </p>
+
+  </div>
+
+  <section class="refs">
+    <h2>References</h2>
+    <p>
+      Muslimani, C., Johnstonbaugh, K., Chandramouli, S., Booth, S., Knox, W. B., and Taylor, M. E. (2025).
+      Towards Improving Reward Design in RL: A Reward Alignment Metric for RL Practitioners. Reinforcement
+      Learning Conference, 2025.
+      <a href="https://openreview.net/forum?id=XZBYLXNGjT" target="_blank" rel="noopener">https://openreview.net/forum?id=XZBYLXNGjT</a>
+    </p>
+    <p>
+      Muslimani, C., Du, Y., Kawamoto, K., Subramanian, K., Stone, P., and Wurman, P. (2026). The Trajectory
+      Alignment Coefficient in Two Acts: From Reward Tuning to Reward Learning. arXiv:2601.16906.
+      <a href="https://arxiv.org/abs/2601.16906" target="_blank" rel="noopener">https://arxiv.org/abs/2601.16906</a>
+    </p>
+    <p>
+      Code: <a href="https://github.com/pragneshbagary/soft-tac" target="_blank" rel="noopener">https://github.com/pragneshbagary/soft-tac</a>
+    </p>
+  </section>
+
+  <div class="post-foot">
+    <a href="index.html"><- All posts</a>
+    <a href="../index.html">Home -></a>
+  </div>
+
+</article>
+
+<script>
+  // reading progress bar
+  const bar = document.getElementById('progress');
+  const update = () => {
+    const h = document.documentElement;
+    const scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    bar.style.width = Math.min(100, Math.max(0, scrolled * 100)) + '%';
+  };
+  document.addEventListener('scroll', update, { passive: true });
+  update();
+</script>
+
+</body>
+</html>

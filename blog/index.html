@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog - Pragnesh Bagary</title>
+  <meta name="description" content="Write-ups and research replications by Pragnesh Bagary.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-subtle: #f7f8fa;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-soft: #94a3b8;
+      --accent: #2563eb;
+      --accent-soft: #eff4ff;
+      --border: #e8eaee;
+      --border-strong: #d9dce2;
+      --shadow-sm: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+      --shadow-md: 0 4px 6px -1px rgba(15,23,42,.06), 0 12px 24px -8px rgba(15,23,42,.10);
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.8); backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
+      border-bottom: 1px solid var(--border); height: 62px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 max(1.5rem, calc((100% - 780px) / 2 + 1.5rem));
+    }
+    .nav-name { font-weight: 700; font-size: .95rem; color: var(--text); text-decoration: none; }
+    .nav-links { list-style: none; display: flex; gap: 1.8rem; }
+    .nav-links a { font-size: .875rem; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: color .15s; }
+    .nav-links a:hover { color: var(--accent); }
+
+    .wrap { max-width: 780px; margin: 0 auto; padding: 0 1.5rem; }
+    header.page-head { padding: 4.5rem 0 2.5rem; }
+    .eyebrow { font-family: var(--mono); font-size: .75rem; color: var(--accent); letter-spacing: .05em; margin-bottom: .8rem; }
+    h1 { font-size: 2.6rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; margin-bottom: .8rem; }
+    .lede { font-size: 1.05rem; color: var(--text-muted); max-width: 620px; }
+
+    .posts { padding-bottom: 5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+    .post-card {
+      display: block; text-decoration: none; color: inherit;
+      background: var(--bg); border: 1px solid var(--border); border-radius: 16px;
+      padding: 1.8rem 2rem; box-shadow: var(--shadow-sm);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s;
+    }
+    .post-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+    .post-meta { font-family: var(--mono); font-size: .74rem; color: var(--text-soft); display: flex; gap: 1rem; margin-bottom: .7rem; }
+    .post-meta .tag { color: var(--accent); }
+    .post-title { font-size: 1.3rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.25; margin-bottom: .6rem; }
+    .post-excerpt { font-size: .93rem; color: var(--text-muted); line-height: 1.7; margin-bottom: 1rem; }
+    .post-more { font-size: .85rem; font-weight: 600; color: var(--accent); }
+
+    footer { border-top: 1px solid var(--border); padding: 2.5rem 0; text-align: center; }
+    .footer-note { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); }
+
+    @media (max-width: 560px) {
+      .nav-links { gap: 1.1rem; }
+      h1 { font-size: 2rem; }
+      .post-card { padding: 1.4rem 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="../index.html" class="nav-name">Pragnesh Bagary</a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="../resume.html">Resume</a></li>
+    <li><a href="index.html">Blog</a></li>
+  </ul>
+</nav>
+
+<header class="page-head">
+  <div class="wrap">
+    <p class="eyebrow">// writing</p>
+    <h1>Blog</h1>
+    <p class="lede">Research replications and engineering write-ups - notes on things I built, broke, and checked twice.</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="posts">
+
+    <a href="soft-tac-lunarlander.html" class="post-card">
+      <div class="post-meta">
+        <span class="tag">reinforcement learning</span>
+        <span>2026</span>
+        <span>~12 min read</span>
+      </div>
+      <p class="post-title">Replicating Soft-TAC: a reward-learning experiment on LunarLander</p>
+      <p class="post-excerpt">
+        A from-scratch reimplementation of a 2026 RL paper's central claim - that a tanh-based Soft-TAC loss
+        degrades more gracefully than cross-entropy under label noise. Building a synthetic ground truth let me
+        measure reward recovery directly, and a careful noise sweep revealed how much of the effect was real,
+        how much was seed variance, and how much was feature scale.
+      </p>
+      <span class="post-more">Read the write-up -></span>
+    </a>
+
+  </div>
+</main>
+
+<footer>
+  <p class="footer-note">Built with HTML &amp; CSS - Hosted on GitHub Pages</p>
+</footer>
+
+</body>
+</html>

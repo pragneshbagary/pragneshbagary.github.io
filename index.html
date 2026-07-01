@@ -1,23 +1,562 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Pragnesh Bagary</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pragnesh Bagary - Engineer</title>
+  <meta name="description" content="Engineer working on composable Go systems, LLM tooling, and reinforcement learning. Open-source author of go-thin and memex.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-subtle: #f7f8fa;
+      --bg-card: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-soft: #94a3b8;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --accent-soft: #eff4ff;
+      --border: #e8eaee;
+      --border-strong: #d9dce2;
+      --radius: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+      --shadow-md: 0 4px 6px -1px rgba(15,23,42,.06), 0 12px 24px -8px rgba(15,23,42,.10);
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* -- Navbar -- */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,.8);
+      backdrop-filter: blur(12px) saturate(160%);
+      -webkit-backdrop-filter: blur(12px) saturate(160%);
+      border-bottom: 1px solid var(--border);
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 max(1.5rem, calc((100% - 1080px) / 2 + 1.5rem));
+    }
+    .nav-name {
+      font-weight: 700;
+      font-size: .95rem;
+      letter-spacing: -.01em;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .nav-links { list-style: none; display: flex; gap: 1.9rem; align-items: center; }
+    .nav-links a {
+      font-size: .875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color .15s;
+    }
+    .nav-links a:hover, .nav-links a.active { color: var(--accent); }
+
+    /* -- Layout -- */
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 1.5rem; }
+    section { padding: 5.5rem 0; }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: .72rem;
+      font-weight: 500;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: .55rem;
+    }
+    h2 {
+      font-size: 1.9rem;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      margin-bottom: 2.5rem;
+    }
+
+    /* -- Reveal animation -- */
+    .reveal { opacity: 0; transform: translateY(16px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+    /* -- Hero -- */
+    #hero { padding: 7.5rem 0 6rem; position: relative; overflow: hidden; }
+    #hero::before {
+      content: '';
+      position: absolute;
+      top: -30%; right: -10%;
+      width: 640px; height: 640px;
+      background: radial-gradient(circle, rgba(37,99,235,.09), transparent 62%);
+      z-index: -1;
+    }
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: .8rem;
+      color: var(--accent);
+      margin-bottom: 1.1rem;
+      letter-spacing: .02em;
+    }
+    .hero-name {
+      font-size: clamp(2.8rem, 6vw, 4.4rem);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -.03em;
+      margin-bottom: .8rem;
+    }
+    .hero-title { font-size: 1.2rem; color: var(--text-muted); font-weight: 500; margin-bottom: 1.4rem; }
+    .hero-title .sep { color: var(--text-soft); margin: 0 .55rem; }
+    .hero-bio { font-size: 1.06rem; color: var(--text-muted); max-width: 560px; margin-bottom: 2.4rem; }
+    .hero-actions { display: flex; gap: .8rem; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .65rem 1.4rem;
+      border-radius: var(--radius);
+      font-size: .875rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all .18s ease;
+    }
+    .btn-primary { background: var(--accent); color: #fff; border: 1px solid var(--accent); box-shadow: var(--shadow-sm); }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border-strong); }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-1px); }
+
+    /* -- About -- */
+    #about { background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .about-text { max-width: 740px; display: flex; flex-direction: column; gap: 1.05rem; }
+    .about-text p { font-size: 1.02rem; color: var(--text-muted); line-height: 1.8; }
+    .about-text p strong { color: var(--text); font-weight: 600; }
+
+    /* -- Skills -- */
+    .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
+    .skill-group h3 {
+      font-family: var(--mono);
+      font-size: .74rem; font-weight: 500;
+      text-transform: uppercase; letter-spacing: .09em;
+      color: var(--text-soft); margin-bottom: .95rem;
+    }
+    .pills { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .pill {
+      background: var(--bg); border: 1px solid var(--border-strong);
+      border-radius: 999px; padding: .3rem .85rem;
+      font-size: .8rem; font-weight: 500; color: var(--text);
+      transition: all .15s;
+    }
+    .pill:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* -- Cards -- */
+    /* Full-bleed: break out of the container so all 4 cards fit in one row */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+      width: 100vw;
+      position: relative;
+      left: 50%;
+      right: 50%;
+      margin-left: -50vw;
+      margin-right: -50vw;
+      padding: .5rem max(1.5rem, calc((100vw - 1440px) / 2 + 1.5rem)) 0;
+    }
+    .card {
+      min-width: 0;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.85rem;
+      display: flex; flex-direction: column;
+      box-shadow: var(--shadow-sm); transition: transform .18s ease, box-shadow .18s ease, border-color .18s;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .35rem; }
+    .card-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+    .card-year { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); white-space: nowrap; padding-top: .2rem; }
+    .card-subtitle { font-size: .8rem; color: var(--accent); font-weight: 500; margin-bottom: 1.1rem; }
+    .card-points { list-style: none; display: flex; flex-direction: column; gap: .55rem; flex: 1; margin-bottom: 1.35rem; }
+    .card-points li { font-size: .865rem; color: var(--text-muted); padding-left: 1.05rem; position: relative; line-height: 1.6; }
+    .card-points li::before { content: '>'; position: absolute; left: 0; color: var(--accent); font-size: .75rem; top: .18rem; }
+    .card-link { font-size: .82rem; font-weight: 600; color: var(--accent); text-decoration: none; margin-top: auto; }
+    .card-link:hover { text-decoration: underline; }
+
+    /* -- Open Source -- */
+    #oss { background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .oss-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+    .oss-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.6rem;
+      box-shadow: var(--shadow-sm); transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .oss-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .oss-repo { font-family: var(--mono); font-size: .92rem; font-weight: 500; margin-bottom: .4rem; }
+    .oss-meta { font-family: var(--mono); font-size: .74rem; color: var(--text-soft); display: flex; gap: 1rem; margin-bottom: .9rem; }
+    .oss-desc { font-size: .865rem; color: var(--text-muted); line-height: 1.6; }
+    .badge { display: inline-block; padding: .12rem .55rem; border-radius: 999px; font-size: .68rem; font-weight: 600; vertical-align: middle; margin-left: .4rem; }
+    .badge-merged { background: #dcfce7; color: #15803d; }
+    .badge-open { background: #dbeafe; color: #1d4ed8; }
+
+    /* -- Split (experience/competition) -- */
+    .split-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .split-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.85rem; box-shadow: var(--shadow-sm); }
+    .split-card-label { font-family: var(--mono); font-size: .72rem; font-weight: 500; text-transform: uppercase; letter-spacing: .1em; color: var(--text-soft); margin-bottom: 1.25rem; }
+    .entry-title { font-size: 1rem; font-weight: 700; margin-bottom: .2rem; }
+    .entry-meta { font-size: .8rem; color: var(--text-muted); margin-bottom: .8rem; }
+    .entry-points { list-style: none; display: flex; flex-direction: column; gap: .45rem; }
+    .entry-points li { font-size: .855rem; color: var(--text-muted); padding-left: 1.05rem; position: relative; line-height: 1.55; }
+    .entry-points li::before { content: '>'; position: absolute; left: 0; color: var(--accent); font-size: .72rem; top: .15rem; }
+    .competition-stat { font-size: 2.2rem; font-weight: 800; color: var(--accent); line-height: 1.1; margin: .8rem 0 .3rem; letter-spacing: -.02em; }
+    .competition-detail { font-size: .855rem; color: var(--text-muted); }
+
+    /* -- Writing teaser -- */
+    .writing-card {
+      display: flex; flex-direction: column; gap: .9rem;
+      background: linear-gradient(135deg, var(--accent-soft), var(--bg));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 2.2rem;
+      box-shadow: var(--shadow-sm); transition: transform .18s ease, box-shadow .18s ease;
+    }
+    .writing-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .writing-tag { font-family: var(--mono); font-size: .72rem; color: var(--accent); letter-spacing: .05em; }
+    .writing-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -.02em; }
+    .writing-desc { font-size: .95rem; color: var(--text-muted); max-width: 640px; line-height: 1.7; }
+    .writing-card a.card-link { font-size: .9rem; }
+
+    /* -- Education -- */
+    #education { background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    .edu-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+    .edu-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1.6rem; box-shadow: var(--shadow-sm); }
+    .edu-school { font-size: 1rem; font-weight: 700; margin-bottom: .25rem; }
+    .edu-degree { font-size: .865rem; color: var(--text-muted); margin-bottom: .45rem; }
+    .edu-year { font-family: var(--mono); font-size: .74rem; color: var(--text-soft); }
+
+    /* -- Footer -- */
+    footer { padding: 3.5rem 0; text-align: center; }
+    .footer-links { display: flex; justify-content: center; flex-wrap: wrap; gap: .5rem 2rem; margin-bottom: 1.1rem; }
+    .footer-links a { font-size: .875rem; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: color .15s; }
+    .footer-links a:hover { color: var(--accent); }
+    .footer-note { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); }
+
+    /* -- Responsive -- */
+    @media (max-width: 1024px) {
+      .card-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .skills-grid { grid-template-columns: 1fr; gap: 1.75rem; }
+      .oss-grid, .split-grid, .edu-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .card-grid { grid-template-columns: 1fr; padding-left: 1.5rem; padding-right: 1.5rem; }
+    }
+    @media (max-width: 560px) {
+      .nav-links { display: none; }
+      section { padding: 4rem 0; }
+      #hero { padding: 5rem 0 4rem; }
+      h2 { font-size: 1.6rem; }
+    }
+  </style>
 </head>
 <body>
-    <h1>Pragnesh Bagary</h1>
 
-    <p>Backend Engineer (Go, Java, Python)</p>
+<!-- Navbar -->
+<nav id="navbar">
+  <a href="#hero" class="nav-name">Pragnesh Bagary</a>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#projects">Projects</a></li>
+    <li><a href="#oss">Open Source</a></li>
+    <li><a href="#writing">Writing</a></li>
+    <li><a href="resume.html">Resume</a></li>
+    <li><a href="blog/index.html">Blog</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+</nav>
 
-    <p>
-        <a href="resume.pdf">Resume</a>
-    </p>
+<!-- Hero -->
+<section id="hero">
+  <div class="container">
+    <p class="hero-eyebrow">// engineer - open source - research</p>
+    <h1 class="hero-name">Pragnesh Bagary</h1>
+    <p class="hero-title">Backend &amp; AI Engineer<span class="sep">-</span>Go<span class="sep">-</span>Python<span class="sep">-</span>LLM Tooling</p>
+    <p class="hero-bio">I build composable Go systems and LLM/agent tooling, contribute to widely-used open source, and reimplement reinforcement-learning research from first principles.</p>
+    <div class="hero-actions">
+      <a href="resume.html" class="btn btn-primary">View Resume -></a>
+      <a href="https://github.com/pragneshbagary" class="btn btn-secondary" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://www.linkedin.com/in/pragneshbagary" class="btn btn-secondary" target="_blank" rel="noopener">LinkedIn</a>
+    </div>
+  </div>
+</section>
 
-    <p>
-        <a href="https://github.com/pragneshbagary">GitHub</a>
-    </p>
+<!-- About -->
+<section id="about">
+  <div class="container reveal">
+    <p class="section-label">About</p>
+    <h2>A bit about me</h2>
+    <div class="about-text">
+      <p>
+        I'm an engineer based in Hyderabad with an M.S. in Computer Engineering from <strong>San Jose State University</strong>.
+        I work across two threads: clean, well-tested <strong>Go systems</strong> - libraries you can actually compose without coupling - and <strong>LLM / agent tooling</strong> built on local-first primitives.
+      </p>
+      <p>
+        Right now I'm developing <strong>go-thin</strong>, an open-source suite of interface-driven Go libraries, and <strong>memex</strong>, an MCP server that gives coding agents persistent per-project memory.
+        Alongside that I reimplement reinforcement-learning research from first principles and contribute patches to projects like charmbracelet/crush and lima-vm/lima.
+      </p>
+      <p>
+        I care about correctness, small API surfaces, and results that survive a second look.
+      </p>
+    </div>
+  </div>
+</section>
 
-    <p>
-        <a href="https://www.linkedin.com/in/pragneshbagary">LinkedIn</a>
-    </p>
+<!-- Skills -->
+<section id="skills">
+  <div class="container reveal">
+    <p class="section-label">Technical Skills</p>
+    <h2>What I work with</h2>
+    <div class="skills-grid">
+      <div class="skill-group">
+        <h3>Languages</h3>
+        <div class="pills">
+          <span class="pill">Go</span><span class="pill">Python</span><span class="pill">Java</span><span class="pill">SQL</span>
+        </div>
+      </div>
+      <div class="skill-group">
+        <h3>AI / LLM &amp; ML</h3>
+        <div class="pills">
+          <span class="pill">LLM APIs</span><span class="pill">MCP</span><span class="pill">RAG</span><span class="pill">Embeddings</span><span class="pill">Pinecone</span><span class="pill">Vector DBs</span><span class="pill">PyTorch</span><span class="pill">NumPy</span><span class="pill">NLP</span>
+        </div>
+      </div>
+      <div class="skill-group">
+        <h3>Backend &amp; Infrastructure</h3>
+        <div class="pills">
+          <span class="pill">REST APIs</span><span class="pill">JWT / RBAC</span><span class="pill">Gin</span><span class="pill">Echo</span><span class="pill">Fiber</span><span class="pill">FastAPI</span><span class="pill">PostgreSQL</span><span class="pill">SQLite / FTS5</span><span class="pill">AWS</span><span class="pill">GCP</span><span class="pill">Docker</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Projects -->
+<section id="projects" style="background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="container reveal">
+    <p class="section-label">Work</p>
+    <h2>Projects</h2>
+    <div class="card-grid">
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">go-thin</span>
+          <span class="card-year">2025 - present</span>
+        </div>
+        <p class="card-subtitle">Composable Go Framework</p>
+        <ul class="card-points">
+          <li>Interface-driven libraries - go-auth, go-paginate, go-events - that compose through interfaces and never depend on each other</li>
+          <li>go-auth: JWT access/refresh lifecycle (rotation, revocation), Argon2id hashing, RBAC, 3 framework adapters (Gin/Echo/Fiber), 3 storage backends (PostgreSQL/SQLite/memory)</li>
+          <li>Test-first: 100% coverage (go-paginate), 96% (go-events), ~74% on go-auth core</li>
+        </ul>
+        <a href="https://github.com/go-thin" class="card-link" target="_blank" rel="noopener">View on GitHub -></a>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">memex</span>
+          <span class="card-year">2026</span>
+        </div>
+        <p class="card-subtitle">Persistent Memory for Coding Agents &nbsp;-&nbsp; Python, MCP, SQLite</p>
+        <ul class="card-points">
+          <li>MCP server that gives coding agents persistent, per-project memory so context survives between sessions</li>
+          <li>5 MCP tools over local SQLite + FTS5 full-text search, with relevance retrieval by keyword and file-path match - fully local, no cloud, no LLM calls</li>
+          <li>Open-sourced (MIT), pip-installable, with merged pull requests from external contributors</li>
+        </ul>
+        <a href="https://github.com/pragneshbagary" class="card-link" target="_blank" rel="noopener">View on GitHub -></a>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Vista</span>
+          <span class="card-year">2025</span>
+        </div>
+        <p class="card-subtitle">Personal RAG Chatbot &nbsp;-&nbsp; Python, FastAPI, Pinecone</p>
+        <ul class="card-points">
+          <li>Production-style RAG pipeline: ingestion, chunking, embeddings, vector retrieval, and response orchestration on a FastAPI backend</li>
+          <li>721 records indexed in Pinecone with namespace isolation and metadata-driven source attribution</li>
+          <li>Intent-aware query routing (direct vs. retrieval-augmented) to keep responses grounded</li>
+        </ul>
+        <a href="https://github.com/pragneshbagary" class="card-link" target="_blank" rel="noopener">View on GitHub -></a>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Soft-TAC Replication</span>
+          <span class="card-year">2026</span>
+        </div>
+        <p class="card-subtitle">Reward-Learning Research &nbsp;-&nbsp; Python, PyTorch</p>
+        <ul class="card-points">
+          <li>Reimplemented the LunarLander reward-learning experiment from a 2026 RL paper to test its Soft-TAC loss claim directly</li>
+          <li>Built a synthetic ground-truth pipeline, DQN dataset generation, and a label-noise sweep with seed-controlled evaluation</li>
+          <li>Found and reported a scale-dependent effect - separating results that survived a second look from those that didn't</li>
+        </ul>
+        <a href="blog/soft-tac-lunarlander.html" class="card-link">Read the write-up -></a>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Open Source -->
+<section id="oss">
+  <div class="container reveal">
+    <p class="section-label">Community</p>
+    <h2>Open Source</h2>
+    <div class="oss-grid">
+
+      <div class="oss-card">
+        <p class="oss-repo">charmbracelet / crush</p>
+        <div class="oss-meta"><span>* 25.4k</span><span>Go - 2026</span></div>
+        <p class="oss-desc">
+          Diagnosed and fixed a goroutine race condition where prompt-history loading raced the agent's
+          message write, dropping cancelled prompts from arrow-up history.
+          <span class="badge badge-open">PR #2773 Open</span>
+        </p>
+      </div>
+
+      <div class="oss-card">
+        <p class="oss-repo">lima-vm / lima</p>
+        <div class="oss-meta"><span>* 20.9k</span><span>Go - 2025</span></div>
+        <p class="oss-desc">
+          Fixed glob no-match errors (normalized nil SFTP results to an empty slice, #4331) and write_file
+          failures (recursive parent-dir creation via MkdirAll, #4373); un-skipped integration tests for both.
+          <span class="badge badge-merged">Merged</span>
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Experience & Competition -->
+<section id="experience" style="background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+  <div class="container reveal">
+    <p class="section-label">Background</p>
+    <h2>Experience &amp; Competition</h2>
+    <div class="split-grid">
+
+      <div class="split-card">
+        <p class="split-card-label">Work Experience</p>
+        <p class="entry-title">Associate Software Developer</p>
+        <p class="entry-meta">Accenture &nbsp;-&nbsp; Sep 2021 - Apr 2022 &nbsp;-&nbsp; Hyderabad</p>
+        <ul class="entry-points">
+          <li>L1 production support for Diebold Nixdorf across 50+ servers - monitoring, patching, and incident triage</li>
+          <li>Managed and escalated production tickets, coordinating with senior engineers on resolution</li>
+        </ul>
+      </div>
+
+      <div class="split-card">
+        <p class="split-card-label">Competition</p>
+        <p class="entry-title">March Machine Learning Mania &nbsp;-&nbsp; Kaggle</p>
+        <p class="entry-meta">2026</p>
+        <p class="competition-stat">Top 1.4%</p>
+        <p class="competition-detail">Top 50 of 3,462 teams &nbsp;-&nbsp; 12,252 entrants</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Writing -->
+<section id="writing">
+  <div class="container reveal">
+    <p class="section-label">Writing</p>
+    <h2>Research &amp; write-ups</h2>
+    <a href="blog/soft-tac-lunarlander.html" class="writing-card" style="text-decoration: none; color: inherit;">
+      <span class="writing-tag">// latest post - reinforcement learning</span>
+      <span class="writing-title">Replicating Soft-TAC: a reward-learning experiment on LunarLander</span>
+      <span class="writing-desc">
+        A from-scratch reimplementation of a 2026 RL paper's central claim - that a tanh-based Soft-TAC loss
+        degrades more gracefully than cross-entropy under label noise. Includes a synthetic ground truth,
+        a silent feature-extractor bug, and two promising results that didn't survive a second set of seeds.
+      </span>
+      <span class="card-link">Read the write-up -></span>
+    </a>
+  </div>
+</section>
+
+<!-- Education -->
+<section id="education">
+  <div class="container reveal">
+    <p class="section-label">Education</p>
+    <h2>Academic Background</h2>
+    <div class="edu-grid">
+
+      <div class="edu-card">
+        <p class="edu-school">San Jose State University</p>
+        <p class="edu-degree">M.S. Computer Engineering</p>
+        <p class="edu-year">Aug 2022 - May 2024 - San Jose, USA</p>
+      </div>
+
+      <div class="edu-card">
+        <p class="edu-school">Chaitanya Bharathi Institute of Technology</p>
+        <p class="edu-degree">B.E. Computer Science and Engineering</p>
+        <p class="edu-year">Aug 2017 - Jun 2021 - Hyderabad, India</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- Contact / Footer -->
+<footer id="contact">
+  <div class="container">
+    <div class="footer-links">
+      <a href="mailto:pragneshbagary1699@gmail.com">pragneshbagary1699@gmail.com</a>
+      <a href="https://github.com/pragneshbagary" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://www.linkedin.com/in/pragneshbagary" target="_blank" rel="noopener">LinkedIn</a>
+      <a href="resume.html">Resume</a>
+      <a href="blog/index.html">Blog</a>
+    </div>
+    <p class="footer-note">Built with HTML &amp; CSS - Hosted on GitHub Pages</p>
+  </div>
+</footer>
+
+<script>
+  // active nav highlighting
+  const navLinks = document.querySelectorAll('.nav-links a[href^="#"]');
+  const targets = document.querySelectorAll('section[id], footer[id]');
+  const navObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  targets.forEach(t => navObserver.observe(t));
+
+  // scroll reveal
+  const revealObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) { entry.target.classList.add('in'); revealObserver.unobserve(entry.target); }
+    });
+  }, { rootMargin: '0px 0px -10% 0px' });
+  document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+</script>
+
 </body>
 </html>
