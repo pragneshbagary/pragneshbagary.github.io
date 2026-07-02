@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pragnesh Bagary - Engineer</title>
-  <meta name="description" content="Engineer working on composable Go systems, LLM tooling, and reinforcement learning. Open-source author of go-thin and memex.">
+  <title>Pragnesh Bagary - AI/Backend Engineer</title>
+  <meta name="description" content="AI/Backend engineer building backend systems and LLM tooling in Go and Python, with a growing focus on reinforcement-learning research. Open-source author of go-thin and memex.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -149,6 +149,7 @@
     .about-text p strong { color: var(--text); font-weight: 600; }
 
     /* -- Skills -- */
+    #skills { background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
     .skills-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.5rem; }
     .skill-group h3 {
       font-family: var(--mono);
@@ -181,12 +182,12 @@
     }
     .card {
       min-width: 0;
-      background: var(--bg-card); border: 1px solid var(--border);
+      background: linear-gradient(90deg, var(--accent-soft), var(--bg)); border: 1px solid var(--border-strong);
       border-radius: var(--radius-lg); padding: 1.85rem;
       display: flex; flex-direction: column;
-      box-shadow: var(--shadow-sm); transition: transform .18s ease, box-shadow .18s ease, border-color .18s;
+      box-shadow: var(--shadow-md); transition: transform .18s ease, box-shadow .18s ease, border-color .18s;
     }
-    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--accent); }
     .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .35rem; }
     .card-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
     .card-year { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); white-space: nowrap; padding-top: .2rem; }
@@ -294,8 +295,8 @@
   <div class="container">
     <p class="hero-eyebrow">// engineer - open source - research</p>
     <h1 class="hero-name">Pragnesh Bagary</h1>
-    <p class="hero-title">Backend &amp; AI Engineer<span class="sep">-</span>Go<span class="sep">-</span>Python<span class="sep">-</span>LLM Tooling</p>
-    <p class="hero-bio">I build composable Go systems and LLM/agent tooling, contribute to widely-used open source, and reimplement reinforcement-learning research from first principles.</p>
+    <p class="hero-title">AI/Backend Engineer<span class="sep">-</span>Java<span class="sep">-</span>Go<span class="sep">-</span>Python</p>
+    <p class="hero-bio">I build backend systems and LLM/agent tooling in Go and Python, contribute to open source, and reimplement reinforcement-learning research to understand it more deeply.</p>
     <div class="hero-actions">
       <a href="resume.html" class="btn btn-primary">View Resume -></a>
       <a href="https://github.com/pragneshbagary" class="btn btn-secondary" target="_blank" rel="noopener">GitHub</a>
@@ -311,17 +312,35 @@
     <h2>A bit about me</h2>
     <div class="about-text">
       <p>
-        I'm an engineer based in Hyderabad with an M.S. in Computer Engineering from <strong>San Jose State University</strong>.
-        I work across two threads: clean, well-tested <strong>Go systems</strong> - libraries you can actually compose without coupling - and <strong>LLM / agent tooling</strong> built on local-first primitives.
+        I'm an <strong>AI/Backend engineer</strong> based in Hyderabad, previously pursuing graduate coursework in Computer Engineering at <strong>San Jose State University</strong>.
+        <strong>Java</strong> has been my core language since undergrad; these days most of what I build day-to-day is in <strong>Go</strong> and <strong>Python</strong> - clean, well-tested Go systems and LLM / agent tooling built on local-first primitives.
       </p>
       <p>
         Right now I'm developing <strong>go-thin</strong>, an open-source suite of interface-driven Go libraries, and <strong>memex</strong>, an MCP server that gives coding agents persistent per-project memory.
         Alongside that I reimplement reinforcement-learning research from first principles and contribute patches to projects like charmbracelet/crush and lima-vm/lima.
       </p>
       <p>
-        I care about correctness, small API surfaces, and results that survive a second look.
+        Lately I've leaned further into research - reimplementing reinforcement-learning papers from scratch to understand them at a deeper level.
       </p>
     </div>
+  </div>
+</section>
+
+<!-- Writing -->
+<section id="writing">
+  <div class="container reveal">
+    <p class="section-label">Writing</p>
+    <h2>Research &amp; write-ups</h2>
+    <a href="blog/soft-tac-lunarlander.html" class="writing-card" style="text-decoration: none; color: inherit;">
+      <span class="writing-tag">// latest post - reinforcement learning</span>
+      <span class="writing-title">Replicating Soft-TAC: a reward-learning experiment on LunarLander</span>
+      <span class="writing-desc">
+        A from-scratch reimplementation of a 2026 RL paper's central claim - that a tanh-based Soft-TAC loss
+        degrades more gracefully than cross-entropy under label noise. Includes a synthetic ground truth,
+        a silent feature-extractor bug, and two promising results that didn't survive a second set of seeds.
+      </span>
+      <span class="card-link">Read the write-up -></span>
+    </a>
   </div>
 </section>
 
@@ -334,7 +353,7 @@
       <div class="skill-group">
         <h3>Languages</h3>
         <div class="pills">
-          <span class="pill">Go</span><span class="pill">Python</span><span class="pill">Java</span><span class="pill">SQL</span>
+          <span class="pill">Java</span><span class="pill">Go</span><span class="pill">Python</span><span class="pill">SQL</span>
         </div>
       </div>
       <div class="skill-group">
@@ -354,7 +373,7 @@
 </section>
 
 <!-- Projects -->
-<section id="projects" style="background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<section id="projects">
   <div class="container reveal">
     <p class="section-label">Work</p>
     <h2>Projects</h2>
@@ -452,7 +471,7 @@
 </section>
 
 <!-- Experience & Competition -->
-<section id="experience" style="background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<section id="experience">
   <div class="container reveal">
     <p class="section-label">Background</p>
     <h2>Experience &amp; Competition</h2>
@@ -480,24 +499,6 @@
   </div>
 </section>
 
-<!-- Writing -->
-<section id="writing">
-  <div class="container reveal">
-    <p class="section-label">Writing</p>
-    <h2>Research &amp; write-ups</h2>
-    <a href="blog/soft-tac-lunarlander.html" class="writing-card" style="text-decoration: none; color: inherit;">
-      <span class="writing-tag">// latest post - reinforcement learning</span>
-      <span class="writing-title">Replicating Soft-TAC: a reward-learning experiment on LunarLander</span>
-      <span class="writing-desc">
-        A from-scratch reimplementation of a 2026 RL paper's central claim - that a tanh-based Soft-TAC loss
-        degrades more gracefully than cross-entropy under label noise. Includes a synthetic ground truth,
-        a silent feature-extractor bug, and two promising results that didn't survive a second set of seeds.
-      </span>
-      <span class="card-link">Read the write-up -></span>
-    </a>
-  </div>
-</section>
-
 <!-- Education -->
 <section id="education">
   <div class="container reveal">
@@ -507,7 +508,7 @@
 
       <div class="edu-card">
         <p class="edu-school">San Jose State University</p>
-        <p class="edu-degree">M.S. Computer Engineering</p>
+        <p class="edu-degree">Graduate Coursework, Computer Engineering - 30/36 credits, did not complete</p>
         <p class="edu-year">Aug 2022 - May 2024 - San Jose, USA</p>
       </div>
 
