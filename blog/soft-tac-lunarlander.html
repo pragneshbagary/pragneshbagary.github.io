@@ -92,6 +92,7 @@
       .post-standfirst { font-size: 1.08rem; }
     }
   </style>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "ac645113654b4b7487eff1b09cdeae7e"}'></script><!-- End Cloudflare Web Analytics -->
 </head>
 <body>
 
@@ -140,7 +141,7 @@
     <h2>Building a synthetic ground truth</h2>
     <p>
       The original experiment requires a human to rate pairs of trajectories, which I don't have access to.
-      Instead, I used a fixed, hand-specified weight vector, <span class="var">w_star</span>, and scored each
+      Instead, I used a fixed, manually defined weight vector, <span class="var">w_star</span>, and scored each
       trajectory as the dot product of <span class="var">w_star</span> and an 8-dimensional feature vector,
       <span class="var">Phi</span> (progress toward the pad, change in speed, tilt, leg contact, engine usage,
       crash, safe landing). Ranking trajectory pairs by that score produces preference labels in the same
@@ -211,7 +212,7 @@
 
     <h2>Feature scale was distorting the headline result</h2>
     <p>
-      While preparing this for publication, I re-examined the noise-sweep numbers and found that recovery looked
+      While preparing this post, I re-examined the noise-sweep numbers and found that recovery looked
       strong at <span class="var">p = 0</span> but Cross-Entropy in particular dropped sharply as soon as any
       noise was introduced (from about 0.98 to 0.23 between <span class="var">p = 0</span> and
       <span class="var">p = 0.05</span>).
@@ -287,21 +288,11 @@
       is a real divergence from the paper's exact setup and worth stating directly.
     </p>
 
-    <h2>Something I keep thinking about</h2>
+    <h2>From Scalar Alignment to Vector Fingerprints</h2>
     <p>
-      One thing has stuck with me since reading the first paper: TAC collapses everything into a single alignment
-      number, one induced ranking of trajectories compared against one human ranking. I keep wondering whether
-      that collapse is actually necessary. My reward here is vector-valued, eight dimensions, and right now I only
-      ever compare it to <span class="var">w_star</span> as a whole, either as a single cosine similarity or as a
-      per-feature weight comparison. I haven't tried running the ranking-agreement computation independently per
-      reward dimension, but I want to: instead of one alignment number, I'd get a vector of them, an "alignment
-      fingerprint" that would tell me which specific objective is misaligned rather than just that something is.
-      My per-feature weight table is close to this in spirit, but it isn't the same computation, and I don't think
-      I can claim the fingerprint idea until I've actually run the ranking agreement per dimension rather than
-      comparing weights. I looked for this specific decomposition in the published work and didn't find it. But
-      it's a fairly small step from what's already there, and the field moves quickly, so I'd call this "I didn't
-      find it" rather than "it doesn't exist." Either way, it's the direction I'd pick up next if I kept going
-      with this.
+      One thing from the first paper has stuck with me: TAC collapses everything into a single number, one induced ranking of trajectories against one human ranking. I keep wondering whether that collapse is necessary. The reward here is eight-dimensional, but I only ever compare it to <span class="var">w_star</span> as a whole, through cosine similarity or a per-feature weight table. What I haven't tried is running the ranking-agreement computation per dimension, trading the single alignment number for a vector of them, an "alignment fingerprint." The appeal is obvious: instead of "something is misaligned," you'd hope to see which objective.
+      <br>I'm not sure it's that clean, though. The human ranking reflects all eight dimensions blended together, so a per-dimension agreement score measures how well one feature's ordering matches the full preference, which isn't the same as whether that feature is misaligned. A dimension could score low just because it only governs part of the preference. So the honest version of this idea has to work out what each per-dimension number actually means before it can claim to localize anything. My per-feature weight table gestures at the same intuition but isn't that computation.
+      <br>I looked for this specific decomposition in the published work and didn't find it, though it's a small step from what's there and the field moves fast, so I'd call that "I didn't find it," not "it doesn't exist." Either way, it's where I'd pick this up next.
     </p>
 
   </div>
