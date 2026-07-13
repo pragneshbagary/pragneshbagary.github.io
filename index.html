@@ -334,13 +334,13 @@
   <div class="container reveal">
     <p class="section-label">Writing</p>
     <h2>Research &amp; write-ups</h2>
-    <a href="blog/soft-tac-lunarlander.html" class="writing-card" style="text-decoration: none; color: inherit;">
+    <a href="blog/alignment-fingerprints.html" class="writing-card" style="text-decoration: none; color: inherit;">
       <span class="writing-tag">// latest post - reinforcement learning</span>
-      <span class="writing-title">Replicating Soft-TAC: a reward-learning experiment on LunarLander</span>
+      <span class="writing-title">Alignment fingerprints: a per-dimension decomposition of reward alignment</span>
       <span class="writing-desc">
-        A from-scratch reimplementation of a 2026 RL paper's central claim - that a tanh-based Soft-TAC loss
-        degrades more gracefully than cross-entropy under label noise. Includes a synthetic ground truth,
-        a silent feature-extractor bug, and two promising results that didn't survive a second set of seeds.
+        A single alignment score tells a reward designer that something is wrong, but not what. Decomposing
+        the TAC metric into exact per-dimension Shapley attributions localizes sign errors the scalar cannot
+        register, and the experiments map where the diagnostic works and where it fails silently.
       </span>
       <span class="card-link">Read the write-up -></span>
     </a>

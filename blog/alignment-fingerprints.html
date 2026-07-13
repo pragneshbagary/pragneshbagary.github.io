@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alignment Fingerprints: A Per-Dimension Decomposition of Reward Alignment - Pragnesh Bagary</title>
+  <meta name="description" content="Decomposing the Trajectory Alignment Coefficient into exact per-dimension Shapley attributions that localize reward misspecification, with experiments mapping where the diagnostic works and where it fails silently.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-subtle: #f7f8fa;
+      --text: #1a2231;
+      --text-muted: #4b5566;
+      --text-soft: #94a3b8;
+      --accent: #2563eb;
+      --accent-soft: #eff4ff;
+      --border: #e8eaee;
+      --border-strong: #d9dce2;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.82); backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
+      border-bottom: 1px solid var(--border); height: 62px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 max(1.5rem, calc((100% - 720px) / 2 + 1.5rem));
+    }
+    .nav-name { font-weight: 700; font-size: .95rem; color: var(--text); text-decoration: none; }
+    .nav-links { list-style: none; display: flex; gap: 1.8rem; }
+    .nav-links a { font-size: .875rem; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: color .15s; }
+    .nav-links a:hover { color: var(--accent); }
+
+    /* Reading progress */
+    #progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--accent); z-index: 200; transition: width .1s linear; }
+
+    .article { max-width: 720px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* Header */
+    .post-head { padding: 3.5rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2.5rem; }
+    .post-meta { font-family: var(--mono); font-size: .75rem; color: var(--text-soft); display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.1rem; }
+    .post-meta .tag { color: var(--accent); }
+    .post-title { font-size: clamp(2rem, 5vw, 2.9rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+    .post-standfirst { font-family: var(--serif); font-size: 1.2rem; color: var(--text-muted); line-height: 1.6; margin-top: 1.1rem; }
+
+    /* Prose */
+    .prose { font-family: var(--serif); font-size: 1.18rem; line-height: 1.75; color: var(--text); }
+    .prose p { margin-bottom: 1.4rem; }
+    .prose h2 {
+      font-family: var(--font); font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em;
+      color: var(--text); margin: 2.8rem 0 1.1rem; padding-top: .4rem;
+      line-height: 1.35;
+    }
+    .prose h2::before { content: '# '; color: var(--accent); font-family: var(--mono); font-weight: 500; font-size: .9em; }
+    .prose strong { font-weight: 600; }
+    .prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+    .prose a:hover { text-decoration-thickness: 2px; }
+    .prose code, .var { font-family: var(--mono); font-size: .82em; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 4px; padding: .08rem .32rem; color: var(--text); }
+    .prose ul { margin: 0 0 1.4rem 1.3rem; }
+    .prose li { margin-bottom: .5rem; }
+
+    .prose figure { margin: 2rem 0; }
+    .prose figure img { display: block; width: 100%; border: 1px solid var(--border); border-radius: 10px; }
+    .prose figcaption { font-family: var(--font); font-size: .85rem; color: var(--text-soft); margin-top: .7rem; text-align: center; line-height: 1.55; }
+
+    /* Display math should scroll on narrow screens rather than overflow */
+    mjx-container[display="true"] { display: block; overflow-x: auto; overflow-y: hidden; max-width: 100%; padding: 2px 0; }
+
+    .callout {
+      font-family: var(--font); font-size: .98rem; line-height: 1.65;
+      background: var(--accent-soft); border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0; padding: 1.1rem 1.3rem; margin: 2rem 0; color: var(--text-muted);
+    }
+
+    /* References */
+    .refs { font-family: var(--font); border-top: 1px solid var(--border); margin-top: 3.5rem; padding: 2.5rem 0 1rem; }
+    .refs h2 { font-size: .8rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); margin-bottom: 1.2rem; }
+    .refs p { font-size: .9rem; color: var(--text-muted); line-height: 1.65; margin-bottom: 1rem; }
+    .refs a { color: var(--accent); text-decoration: none; word-break: break-word; }
+    .refs a:hover { text-decoration: underline; }
+
+    /* Post footer */
+    .post-foot { border-top: 1px solid var(--border); margin-top: 1rem; padding: 2rem 0 4rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .post-foot a { font-size: .88rem; font-weight: 600; color: var(--accent); text-decoration: none; }
+    .post-foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 560px) {
+      .nav-links { gap: 1.1rem; }
+      .prose { font-size: 1.1rem; }
+      .post-standfirst { font-size: 1.08rem; }
+    }
+  </style>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "ac645113654b4b7487eff1b09cdeae7e"}'></script><!-- End Cloudflare Web Analytics -->
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <a href="../index.html" class="nav-name">Pragnesh Bagary</a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="../resume.html">Resume</a></li>
+    <li><a href="index.html">Blog</a></li>
+  </ul>
+</nav>
+
+<article class="article">
+
+  <header class="post-head">
+    <div class="post-meta">
+      <span class="tag">reinforcement learning</span>
+      <span>2026</span>
+      <span>Original research</span>
+    </div>
+    <h1 class="post-title">Alignment fingerprints: a per-dimension decomposition of reward alignment</h1>
+    <p class="post-standfirst">A single alignment score can tell a reward designer that something is wrong, but not what. This post decomposes the Trajectory Alignment Coefficient into exact per-dimension Shapley attributions, then maps where the resulting diagnostic localizes reward misspecification and where it provably cannot.</p>
+  </header>
+
+  <div class="prose">
+
+    <p>
+      My <a href="soft-tac-lunarlander.html">previous post</a> replicated Soft-TAC on LunarLander and ended
+      with an open question. The Trajectory Alignment Coefficient (TAC) measures how well a reward function
+      agrees with a human's preferences, and it reports that agreement as a single number: the Kendall tau-b
+      correlation between the trajectory rankings the reward induces and the rankings the human provides. The
+      scalar form is what makes TAC practical as a selection criterion and as a training loss, but it limits
+      its value as a diagnostic. A designer who sees \(\mathrm{TAC} = 0.6\) learns that the reward disagrees
+      with the human somewhere, but not where. Since the reward in my setup is a vector of eight interpretable
+      feature weights, the natural question is whether the agreement computation can be attributed to
+      individual dimensions: an alignment fingerprint rather than an alignment score.
+    </p>
+    <p>
+      This post develops that decomposition and evaluates it against a known ground truth. Some of what
+      follows is positive and some of it is negative, and I have tried to give both the same weight: the
+      method localizes sign errors reliably, it stops working past a measurable correlation boundary, and
+      there is a class of errors it cannot see at all.
+    </p>
+
+    <h2>Background and setup</h2>
+    <p>
+      All experiments run on the pipeline from the replication post. Each LunarLander trajectory is summarized
+      by a feature vector \(\Phi \in \mathbb{R}^{8}\), the per-episode sum of eight per-step features:
+      progress toward the pad, change in speed, change in tilt, leg contact, side-engine and main-engine
+      firing, and terminal crash and safe-landing indicators. A fixed hidden weight vector
+    </p>
+    <p>
+      \[ w^{*} = (-2,\ -0.5,\ -1,\ 1,\ -0.1,\ -0.1,\ -5,\ 5) \]
+    </p>
+    <p>
+      acts as the human: it scores each trajectory as \(w^{*\top}\Phi\) and labels all 2775 pairs of 75
+      trajectories according to which one scores higher.
+    </p>
+    <p>
+      A candidate reward \(w \in \mathbb{R}^{8}\) induces its own preference on each pair,
+      \(s_{ij}(w) = \operatorname{sign}\big(w^{\top}(\Phi_i - \Phi_j)\big)\), and its TAC is the Kendall tau-b
+      agreement between those induced preferences and the labels \(y\). With \(P\) concordant and \(Q\)
+      discordant pairs among the pairs untied on both sides,
+    </p>
+    <p>
+      \[ \mathrm{TAC}(w) \;=\; \frac{P - Q}{\sqrt{M_s \, M_y}}, \]
+    </p>
+    <p>
+      where \(M_s\) and \(M_y\) count the pairs left untied by the reward and by the labels respectively. A
+      value of 1 means the reward ranks every pair the way the human does; 0 means no association.
+    </p>
+    <p>
+      Because \(w^{*}\) is known, every diagnostic in this post can be scored against ground truth. This is a
+      validation the original TAC studies could not perform, since they observed only the human's preferences,
+      never the underlying weights. The cost of the design is that the labeler is exactly linear in the
+      features, a simplification that real human preferences will not satisfy. To control for
+      dataset-specific artifacts, every headline number was reproduced on three independently regenerated
+      trajectory pools, each built from retrained agents and fresh rollouts.
+    </p>
+
+    <h2>A univariate baseline fails under feature correlation</h2>
+    <p>
+      The simplest candidate decomposition is univariate: compute
+      \(u_k = \tau_b\big(\operatorname{sign}(\Delta\Phi_k),\, y\big)\), the agreement between feature \(k\)
+      alone and the human's preference labels. It is cheap, it needs no candidate reward, and on this data it
+      gets a sign backwards.
+    </p>
+    <p>
+      On raw features, the crash indicator receives a univariate tau of +0.36, which reads as crashing being
+      preferred. The true \(w^{*}\) assigns crash a weight of -5, the strongest penalty in the vector. The
+      cause is feature correlation. Trajectories that crash end early and therefore fire the main engine less
+      (<span class="var">corr(crash, main_eng) = -0.61</span> on this pool); main engine usage is genuinely
+      dispreferred, and the crash feature inherits credit through that correlation. This is the standard
+      failure mode of univariate screening, and it matters here because trajectory features are correlated in
+      almost any realistic dataset. A usable decomposition has to handle this case.
+    </p>
+
+    <h2>Shapley attribution over reward dimensions</h2>
+    <p>
+      The Shapley value (Shapley, 1953) is cooperative game theory's answer to a credit-assignment question:
+      when a set of players jointly produces a payoff, how should the payoff be divided among them? It gives
+      each player the average of their marginal contributions over every order in which the players could
+      join, and it is the unique division satisfying a short list of fairness axioms. The same construction is
+      widely used in machine learning to attribute a model's prediction to its input features, most visibly in
+      SHAP (Lundberg and Lee, 2017). For readers new to it, the
+      <a href="https://en.wikipedia.org/wiki/Shapley_value" target="_blank" rel="noopener">Wikipedia article</a>
+      covers the definition and axioms, and the Shapley-value chapter of Christoph Molnar's
+      <a href="https://christophm.github.io/interpretable-ml-book/shapley.html" target="_blank" rel="noopener">Interpretable Machine Learning</a>
+      is a good tutorial on the attribution use case. Here, the players are the reward's dimensions and the
+      payoff is its TAC.
+    </p>
+    <p>
+      Concretely, for a candidate reward \(w\) with \(d\) dimensions, define the value of a coalition
+      \(S \subseteq \{1, \dots, d\}\) as \(v(S) = \mathrm{TAC}(w \odot \mathbf{1}_S)\): the TAC of the reward
+      with every component outside \(S\) set to zero, and \(v(\emptyset) = 0\). The fingerprint entry for
+      dimension \(k\) is its Shapley value,
+    </p>
+    <p>
+      \[ F_k(w) \;=\; \sum_{S \,\subseteq\, \{1,\dots,d\} \setminus \{k\}}
+      \frac{|S|!\,(d - |S| - 1)!}{d!}\, \Big( v(S \cup \{k\}) - v(S) \Big). \]
+    </p>
+    <p>
+      With \(d = 8\) there are only \(2^{8} = 256\) coalitions, so the attribution is computed exactly, with
+      no sampling, in milliseconds.
+    </p>
+    <p>
+      The construction inherits two of the standard Shapley axioms. Efficiency means the values sum exactly
+      to the aggregate score, \(\sum_{k=1}^{d} F_k(w) = \mathrm{TAC}(w)\), so the fingerprint is a true
+      decomposition of the metric rather than a separate heuristic sitting next to it. The null-player axiom
+      means a dimension with zero weight, which never changes the value of any coalition, gets an attribution
+      of exactly zero. Keep that second one in mind: it is the reason, later in the post, that the fingerprint
+      turns out to be blind to omitted reward terms.
+    </p>
+    <p>
+      The fingerprint supports a simple decision rule. A dimension with a clearly negative \(F_k\) is actively
+      pushing the reward's rankings away from the human's, and in a hand-designed reward that almost always
+      indicates a sign error. On the crash confound described above, the fingerprint assigns crash the correct
+      negative attribution that univariate screening gets backwards.
+    </p>
+
+    <h2>The effect of feature scale</h2>
+    <p>
+      The <a href="soft-tac-lunarlander.html">replication post</a> documented how feature scale distorted one of its headline results. The same issue
+      appeared here within the first hour of experiments, and it affects everything downstream.
+    </p>
+    <p>
+      On raw features, the two engine-usage features are per-episode firing counts in the hundreds, while
+      crash and safe landing are binary flags, so the engine terms dominate the labeling score. The
+      fingerprint of \(w^{*}\) evaluated against its own labels makes this concrete: the two engine dimensions
+      carry 0.82 of the total attribution of 1.0 (0.51 and 0.31). In other words, the raw-feature labeler is
+      mostly ranking trajectories by fuel usage, regardless of what \(w^{*}\) was meant to express. The scalar
+      TAC of 1.0 cannot reveal this; the decomposition does. After dividing each feature by its standard
+      deviation, the attribution mass moves to crash, progress, and safe landing, which matches the intent of
+      the weights. All results below use standardized features, and the unscaled numbers are reported where
+      they mark the resolution limit of the raw data.
+    </p>
+
+    <h2>Localizing sign errors</h2>
+    <p>
+      The core experiment: take \(w^{*}\), flip the sign of one dimension, and check whether the flipped
+      dimension receives the most negative fingerprint value. This simulates the most common way a
+      hand-designed reward goes wrong, a term built on the right feature with the wrong direction.
+    </p>
+    <p>
+      On standardized features, the fingerprint identifies the flipped dimension in 8 of 8 cases. The result
+      reproduces on all three trajectory pools and remains stable down to preference budgets of one to two
+      hundred pairs, against the 148 pairs the original TAC user study collected from humans. The most
+      informative case is the main engine. Flipping <span class="var">main_eng</span> moves the scalar TAC
+      from 1.0 to 0.997, a change an aggregate metric cannot register, yet the fingerprint still places the
+      flipped dimension at the minimum. Most cases are not marginal: flipping
+      <span class="var">safe_land</span> gives it an attribution of -0.465 while the next-lowest dimension
+      remains positive.
+    </p>
+    <p>
+      On raw features, the result drops to 5 of 8, and the failures are systematic rather than random. Every
+      pool fails on the same three dimensions (change in speed, change in tilt, crash), and each failed case
+      is misattributed to another member of that same trio. These are exactly the dimensions the raw-feature
+      labels barely encode once the engine terms absorb the ranking. I interpret this as a resolution limit of
+      the preference data rather than of the attribution method, and feature standardization is what removes
+      it.
+    </p>
+
+    <h2>Correlation as a controlled variable</h2>
+    <p>
+      In LunarLander, the feature correlations are fixed by the physics and by the behavior of the DQN
+      checkpoints. To test the confound explanation directly, I built a 9x9 gridworld in which a mixing
+      fraction \(m\) controls what share of item-B tiles are placed on top of item-A tiles. The ground-truth
+      reward values A and assigns B a weight of exactly zero, so B is worthless to the human. A spurious
+      candidate reward pays +2 for B anyway, and the question is whether any diagnostic can detect that.
+    </p>
+    <p>
+      Sweeping \(m\) from 0 to 1 turns the crash confound into a curve, with five generation seeds per point.
+      Univariate credit to the worthless feature rises monotonically from -0.11 to +0.58, and at full
+      co-location the A and B feature columns are identical, so no per-feature statistic could separate them
+      even in principle. The fingerprint behaves differently. B's Shapley value starts clearly negative,
+      correctly flagging the misspecification, and crosses zero as \(\mathrm{corr}(A, B)\) passes from roughly
+      0.2 to 0.6. Over the same sweep, the scalar TAC of the spurious reward stays between 0.82 and 0.90,
+      never indicating a problem.
+    </p>
+    <p>
+      A synthetic sweep with Gaussian features makes the boundary precise and adds the property I consider
+      most useful: the detection threshold scales with the severity of the misspecification. A spurious weight
+      of 0.5 stops being detectable above roughly \(\rho \approx 0.4\), a weight of 2 crosses near
+      \(\rho \approx 0.6\), and a weight of 4 remains detectable to roughly \(\rho \approx 0.8\). More
+      damaging errors stay visible at higher correlation, which is the right way around: the mistakes that
+      would hurt the most are the hardest ones to hide. Sign-flip
+      localization on the genuinely valued dimensions stays perfect at every correlation level in both
+      environments, so what is lost at high correlation is specifically the ability to flag an extra term on a
+      correlated worthless feature. Past that boundary, the failure is not a weakness of the fingerprint:
+      rewards that trade weight between A and B induce nearly identical rankings, so the preference data
+      itself cannot distinguish them, and no diagnostic computed from the same preferences could.
+    </p>
+
+    <figure>
+      <img src="https://raw.githubusercontent.com/pragneshbagary/alignment-fingerprints/main/assets/curves.png" alt="Univariate credit, fingerprint attribution, and the identifiability boundary as correlation increases" loading="lazy">
+      <figcaption>Univariate credit to the worthless feature, the fingerprint's attribution, and the identifiability boundary as correlation increases.</figcaption>
+    </figure>
+
+    <div class="callout">
+      Above the boundary, the failure is silent. B's attribution drifts to small positive values as its credit
+      is absorbed by the correlated informative feature, so a practitioner sees a clean fingerprint rather
+      than an alarm on the wrong dimension. This is the opposite of univariate screening, which fails loudly
+      in the wrong direction, and it sets the rule for using this tool in practice: an unremarkable fingerprint over
+      highly correlated features is weak evidence of alignment, not strong evidence.
+    </div>
+
+    <h2>Robustness to label noise</h2>
+    <p>
+      Flipping each preference label independently with probability \(p\) leaves the localization results
+      essentially unchanged through \(p = 0.3\). At \(p = 0.5\), where the labels carry no information,
+      localization collapses to chance, which is the negative control behaving as it should. That table is
+      less informative than it looks, though. Uniform label flipping scales the tau of every coalition by
+      \((1 - 2p)\) in expectation, so all Shapley values shrink by the same factor and the ordering of the
+      minimum is preserved until finite-sample noise dominates. I verified this scaling directly: the observed
+      shrinkage matches \((1 - 2p)\) to three decimal places at every noise level. This robustness therefore
+      belongs to any rank-based method, not to the fingerprint specifically, and the argument does not cover
+      noise concentrated on near-tie pairs, which is a more realistic model of human labeling error.
+    </p>
+
+    <h2>What the fingerprint cannot detect</h2>
+    <p>
+      The null-player property has a sharp consequence. If the designer omits a term the human cares about,
+      that dimension's Shapley value is exactly zero by construction. The fingerprint can identify a term
+      pointing in the wrong direction; it cannot, even in principle, identify a term that is missing.
+    </p>
+    <p>
+      I tested a complementary heuristic for omissions: flag the dimension with the largest gap between its
+      univariate alignment and its Shapley contribution, on the reasoning that an omitted feature predicts the
+      human's preferences while contributing nothing to the reward's agreement. The heuristic does not work.
+      Its gap score is dominated by each dimension's baseline value, which is present even when nothing is
+      omitted, so it flags nearly the same dimension regardless of which one was zeroed, and its apparent
+      successes are just that constant default happening to land on the right answer. Omission detection remains unsolved in this setup, not partially solved. This failure is
+      also silent: an omitted term produces no anomaly at all, so a clean fingerprint is never evidence that
+      the feature set is complete.
+    </p>
+
+    <h2>The fingerprint in a repair loop</h2>
+    <p>
+      The original TAC user study showed that access to the scalar helps designers select better rewards. The
+      case for a fingerprint is that it should help them repair rewards, so I simulated that workflow.
+      Starting from \(w^{*}\) with one to three dimensions sign-flipped, a simulated designer flips one sign
+      per round under one of three policies: flip the dimension with the most negative fingerprint value,
+      greedily evaluate all eight possible flips and keep the best, or flip at random. Each policy ran for one
+      hundred trials.
+    </p>
+    <p>
+      On standardized features, the fingerprint policy repairs every reward in exactly as many rounds as there
+      are flipped dimensions, one correct diagnosis per round, succeeding in 100 of 100 trials, while random
+      repair succeeds in 13. The diagnosis itself is clearly sound. The problem is the greedy baseline, which
+      matches the fingerprint round for round at a fraction of the cost, 17 TAC evaluations per trial against
+      roughly 543: with only eight possible edits, simply trying all of them is cheap. On raw features, the
+      fingerprint policy drops to 29 of 100, inheriting the localization failures described earlier, while
+      greedy remains perfect because it directly optimizes the quantity the stopping rule checks. The
+      fingerprint's advantage is architectural: its cost does not grow with the size of the edit vocabulary,
+      since it diagnoses dimensions rather than searching over candidate edits, and in any realistic edit
+      space larger than eight sign flips the greedy baseline stops being runnable. On this benchmark as
+      configured, though, greedy is the better repair policy, and I would rather say that plainly than dress
+      the fingerprint up as a search method. Its value lies in what it tells the designer, not in how it
+      searches.
+    </p>
+    <p>
+      One last observation from these runs, for which I do not yet have an explanation. On every pool, the Soft-TAC optimizer
+      reaches near-perfect agreement (TAC around 0.99), yet its cosine similarity to \(w^{*}\) ranges from
+      0.70 to 0.96 across the regenerated pools, and I have not identified what drives the variation.
+      Near-perfect agreement with the preferences is evidently compatible with a wide range of actual
+      recovery, and the scalar cannot indicate where in that range a given run landed.
+    </p>
+
+    <h2>Discussion</h2>
+    <p>
+      The first TAC paper aims to inform reward designers; the follow-up aims to replace them, learning the
+      reward from preferences and skipping the design step. This work is closer in spirit to the first paper,
+      but its results bear on the second. A learned reward that fits the preferences almost perfectly can
+      still sit anywhere from 0.70 to 0.96 cosine similarity from the intent that generated them, and past the
+      identifiability boundary no optimizer can distinguish a correct reward from a confounded one, because
+      the preferences themselves cannot. Automating reward specification does not remove the practitioner from
+      the loop; it moves them from author to auditor, and an auditor needs instruments that report more than a
+      single number. The fingerprint is a first attempt at such an instrument, validated in a setting where a
+      ground-truth answer key could be constructed.
+    </p>
+
+    <h2>Summary of results</h2>
+    <p>
+      <strong>Supported by the experiments.</strong> Exact Shapley attribution of TAC localizes sign-flipped
+      reward dimensions reliably on standardized features, including flips too small for the scalar to
+      register, and the result holds across regenerated trajectory pools, small preference budgets, and
+      uniform label noise. The attribution also corrects a genuine sign confound that univariate screening
+      gets backwards. Detection of a spurious term on a correlated worthless feature fails above a correlation
+      threshold; that threshold rises with the magnitude of the spurious term, and the failure above it is
+      silent rather than loud.
+    </p>
+    <p>
+      <strong>Negative results.</strong> The fingerprint is structurally blind to omitted reward terms, and
+      the univariate-gap heuristic for detecting omissions degenerates into a near-constant flag. The
+      label-noise robustness is a \((1 - 2p)\) property of any rank-based method rather than a contribution of
+      this work. In the repair-loop benchmark as configured, exhaustive greedy search is the better repair
+      policy.
+    </p>
+    <p>
+      <strong>Not claimed.</strong> Any conclusion about the fingerprints of learned rewards versus their true
+      recovery. That question stays open until the recovery instability across pools (cosine similarity from
+      0.70 to 0.96 at near-identical TAC) is understood.
+    </p>
+
+    <h2>Code and paper</h2>
+    <p>
+      Code and data are available at
+      <a href="https://github.com/pragneshbagary/alignment-fingerprints" target="_blank" rel="noopener">github.com/pragneshbagary/alignment-fingerprints</a>.
+      A paper version of this work is in preparation; I will add the arXiv link here when it is available.
+    </p>
+
+  </div>
+
+  <section class="refs">
+    <h2>References</h2>
+    <p>
+      Muslimani, C., Johnstonbaugh, K., Chandramouli, S., Booth, S., Knox, W. B., and Taylor, M. E. (2025).
+      Towards Improving Reward Design in RL: A Reward Alignment Metric for RL Practitioners. Reinforcement
+      Learning Conference, 2025.
+      <a href="https://openreview.net/forum?id=XZBYLXNGjT" target="_blank" rel="noopener">https://openreview.net/forum?id=XZBYLXNGjT</a>
+    </p>
+    <p>
+      Muslimani, C., Du, Y., Kawamoto, K., Subramanian, K., Stone, P., and Wurman, P. (2026). The Trajectory
+      Alignment Coefficient in Two Acts: From Reward Tuning to Reward Learning. arXiv:2601.16906.
+      <a href="https://arxiv.org/abs/2601.16906" target="_blank" rel="noopener">https://arxiv.org/abs/2601.16906</a>
+    </p>
+    <p>
+      Tien, J., He, J. Z.-Y., Erickson, Z., Dragan, A., and Brown, D. S. (2023). Causal Confusion and Reward
+      Misidentification in Preference-Based Reward Learning. ICLR 2023.
+      <a href="https://arxiv.org/abs/2204.06601" target="_blank" rel="noopener">https://arxiv.org/abs/2204.06601</a>
+    </p>
+    <p>
+      Shapley, L. S. (1953). A Value for n-Person Games. In Contributions to the Theory of Games II,
+      pages 307-317. Princeton University Press.
+    </p>
+    <p>
+      Lundberg, S. M. and Lee, S.-I. (2017). A Unified Approach to Interpreting Model Predictions. NeurIPS
+      2017.
+      <a href="https://arxiv.org/abs/1705.07874" target="_blank" rel="noopener">https://arxiv.org/abs/1705.07874</a>
+    </p>
+    <p>
+      Code: <a href="https://github.com/pragneshbagary/alignment-fingerprints" target="_blank" rel="noopener">https://github.com/pragneshbagary/alignment-fingerprints</a>
+    </p>
+  </section>
+
+  <div class="post-foot">
+    <a href="index.html"><- All posts</a>
+    <a href="../index.html">Home -></a>
+  </div>
+
+</article>
+
+<script>
+  // reading progress bar
+  const bar = document.getElementById('progress');
+  const update = () => {
+    const h = document.documentElement;
+    const scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    bar.style.width = Math.min(100, Math.max(0, scrolled * 100)) + '%';
+  };
+  document.addEventListener('scroll', update, { passive: true });
+  update();
+</script>
+
+</body>
+</html>
