@@ -169,36 +169,30 @@
     }
     .pill:hover { border-color: var(--accent); color: var(--accent); }
 
-    /* -- Cards -- */
-    /* Full-bleed: break out of the container so all 4 cards fit in one row */
-    .card-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1.5rem;
-      width: 100vw;
-      position: relative;
-      left: 50%;
-      right: 50%;
-      margin-left: -50vw;
-      margin-right: -50vw;
-      padding: .5rem max(1.5rem, calc((100vw - 1440px) / 2 + 1.5rem)) 0;
+    /* -- Projects -- */
+    .project-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
+    .project {
+      min-width: 0; display: flex; flex-direction: column;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 1.75rem 1.85rem 1.5rem;
+      transition: border-color .18s ease, box-shadow .18s ease;
     }
-    .card {
-      min-width: 0;
-      background: linear-gradient(90deg, var(--accent-soft), var(--bg)); border: 1px solid var(--border-strong);
-      border-radius: var(--radius-lg); padding: 1.85rem;
-      display: flex; flex-direction: column;
-      box-shadow: var(--shadow-md); transition: transform .18s ease, box-shadow .18s ease, border-color .18s;
+    .project:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+    .project-top { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: .7rem; }
+    .project-kind { font-family: var(--mono); font-size: .7rem; font-weight: 500; text-transform: uppercase; letter-spacing: .09em; color: var(--accent); }
+    .project-year { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); white-space: nowrap; }
+    .project-title { font-size: 1.2rem; font-weight: 700; letter-spacing: -.015em; margin-bottom: .35rem; }
+    .project-summary { font-size: .92rem; color: var(--text); margin-bottom: 1rem; }
+    .project-points { list-style: none; display: flex; flex-direction: column; gap: .5rem; margin-bottom: 1.4rem; }
+    .project-points li { font-size: .86rem; color: var(--text-muted); line-height: 1.6; padding-left: 1rem; position: relative; }
+    .project-points li::before { content: ''; position: absolute; left: 0; top: .66em; width: 4px; height: 4px; border-radius: 50%; background: var(--border-strong); }
+    .project-foot {
+      margin-top: auto; padding-top: 1.1rem; border-top: 1px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;
     }
-    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--accent); }
-    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .35rem; }
-    .card-title { font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
-    .card-year { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); white-space: nowrap; padding-top: .2rem; }
-    .card-subtitle { font-size: .8rem; color: var(--accent); font-weight: 500; margin-bottom: 1.1rem; }
-    .card-points { list-style: none; display: flex; flex-direction: column; gap: .55rem; flex: 1; margin-bottom: 1.35rem; }
-    .card-points li { font-size: .865rem; color: var(--text-muted); padding-left: 1.05rem; position: relative; line-height: 1.6; }
-    .card-points li::before { content: '>'; position: absolute; left: 0; color: var(--accent); font-size: .75rem; top: .18rem; }
-    .card-link { font-size: .82rem; font-weight: 600; color: var(--accent); text-decoration: none; margin-top: auto; }
+    .tags { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .tag { font-family: var(--mono); font-size: .7rem; color: var(--text-muted); background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 6px; padding: .12rem .5rem; }
+    .card-link { font-size: .84rem; font-weight: 600; color: var(--accent); text-decoration: none; white-space: nowrap; }
     .card-link:hover { text-decoration: underline; }
 
     /* -- Open Source -- */
@@ -229,19 +223,28 @@
     .competition-stat { font-size: 2.2rem; font-weight: 800; color: var(--accent); line-height: 1.1; margin: .8rem 0 .3rem; letter-spacing: -.02em; }
     .competition-detail { font-size: .855rem; color: var(--text-muted); }
 
-    /* -- Writing teaser -- */
-    .writing-card {
-      display: flex; flex-direction: column; gap: .9rem;
-      background: linear-gradient(135deg, var(--accent-soft), var(--bg));
-      border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 2.2rem;
-      box-shadow: var(--shadow-sm); transition: transform .18s ease, box-shadow .18s ease;
+    /* -- Writing -- */
+    .writing-feature {
+      display: block; text-decoration: none; color: inherit;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 2rem 2.1rem;
+      transition: border-color .18s ease, box-shadow .18s ease;
     }
-    .writing-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
-    .writing-tag { font-family: var(--mono); font-size: .72rem; color: var(--accent); letter-spacing: .05em; }
-    .writing-title { font-size: 1.4rem; font-weight: 800; letter-spacing: -.02em; }
-    .writing-desc { font-size: .95rem; color: var(--text-muted); max-width: 640px; line-height: 1.7; }
-    .writing-card a.card-link { font-size: .9rem; }
+    .writing-feature:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+    .writing-meta { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); display: flex; flex-wrap: wrap; gap: .9rem; margin-bottom: .85rem; }
+    .writing-meta .latest { color: var(--accent); }
+    .writing-title { display: block; font-size: 1.45rem; font-weight: 800; letter-spacing: -.02em; line-height: 1.25; margin-bottom: .7rem; }
+    .writing-desc { display: block; font-size: .95rem; color: var(--text-muted); max-width: 720px; line-height: 1.7; margin-bottom: 1.2rem; }
+    .writing-more { margin-top: 1.25rem; display: flex; flex-direction: column; }
+    .writing-row {
+      display: flex; justify-content: space-between; align-items: baseline; gap: 1.5rem;
+      padding: .85rem .15rem; border-bottom: 1px solid var(--border);
+      text-decoration: none; color: var(--text); font-size: .92rem; font-weight: 500;
+    }
+    .writing-row:first-child { border-top: 1px solid var(--border); }
+    .writing-row:hover { color: var(--accent); }
+    .writing-row span:last-child { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); white-space: nowrap; }
+    .writing-all { display: inline-block; margin-top: 1.1rem; }
 
     /* -- Education -- */
     #education { background: var(--bg-subtle); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
@@ -259,21 +262,16 @@
     .footer-note { font-family: var(--mono); font-size: .72rem; color: var(--text-soft); }
 
     /* -- Responsive -- */
-    @media (max-width: 1024px) {
-      .card-grid { grid-template-columns: repeat(2, 1fr); }
-    }
     @media (max-width: 768px) {
       .skills-grid { grid-template-columns: 1fr; gap: 1.75rem; }
-      .oss-grid, .split-grid, .edu-grid { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 560px) {
-      .card-grid { grid-template-columns: 1fr; padding-left: 1.5rem; padding-right: 1.5rem; }
+      .oss-grid, .split-grid, .edu-grid, .project-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 560px) {
       .nav-links { display: none; }
       section { padding: 4rem 0; }
       #hero { padding: 5rem 0 4rem; }
       h2 { font-size: 1.6rem; }
+      .project, .writing-feature { padding: 1.5rem 1.35rem; }
     }
   </style>
 <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "ac645113654b4b7487eff1b09cdeae7e"}'></script><!-- End Cloudflare Web Analytics -->
@@ -333,16 +331,22 @@
   <div class="container reveal">
     <p class="section-label">Writing</p>
     <h2>Research &amp; write-ups</h2>
-    <a href="blog/alignment-fingerprints.html" class="writing-card" style="text-decoration: none; color: inherit;">
-      <span class="writing-tag">// latest post - reinforcement learning</span>
-      <span class="writing-title">TAC fingerprints: a per-dimension decomposition of reward alignment</span>
+    <a href="blog/counterfactual-shapley-skillluck.html" class="writing-feature">
+      <span class="writing-meta"><span class="latest">latest post</span><span>reinforcement learning</span><span>2026</span></span>
+      <span class="writing-title">Reimplementing Counterfactual Shapley Credit Assignment</span>
       <span class="writing-desc">
-        A single alignment score tells a reward designer that something is wrong, but not what. Decomposing
-        the TAC metric into exact per-dimension Shapley attributions localizes sign errors the scalar cannot
-        register, and the experiments map where the diagnostic works and where it fails silently.
+        An independent reimplementation of the SkillLuck experiment: the counterfactual rollout, the Shapley
+        estimator, and the PPO loop, built from scratch. An exact oracle at a small horizon exposed a bias in
+        the antithetic sampling that more samples could never have fixed, and a 50-seed comparison separated
+        what reproduced from what did not.
       </span>
       <span class="card-link">Read the write-up -></span>
     </a>
+    <div class="writing-more">
+      <a href="blog/alignment-fingerprints.html" class="writing-row"><span>TAC fingerprints: a per-dimension decomposition of reward alignment</span><span>2026</span></a>
+      <a href="blog/soft-tac-lunarlander.html" class="writing-row"><span>Replicating Soft-TAC on LunarLander</span><span>2026</span></a>
+    </div>
+    <a href="blog/index.html" class="card-link writing-all">All posts -></a>
   </div>
 </section>
 
@@ -379,63 +383,67 @@
   <div class="container reveal">
     <p class="section-label">Work</p>
     <h2>Projects</h2>
-    <div class="card-grid">
+    <div class="project-grid">
 
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">go-thin</span>
-          <span class="card-year">2025 - present</span>
-        </div>
-        <p class="card-subtitle">Composable Go Framework</p>
-        <ul class="card-points">
-          <li>Interface-driven libraries - go-auth, go-paginate, go-events - that compose through interfaces and never depend on each other</li>
-          <li>go-auth: JWT access/refresh lifecycle (rotation, revocation), Argon2id hashing, RBAC, 3 framework adapters (Gin/Echo/Fiber), 3 storage backends (PostgreSQL/SQLite/memory)</li>
-          <li>Test-first: 100% coverage (go-paginate), 96% (go-events), ~74% on go-auth core</li>
+      <article class="project">
+        <div class="project-top"><span class="project-kind">Open source / Framework</span><span class="project-year">2025 - present</span></div>
+        <h3 class="project-title">go-thin</h3>
+        <p class="project-summary">Composable Go framework of small, interface-driven libraries.</p>
+        <ul class="project-points">
+          <li>go-auth, go-paginate and go-events compose through interfaces and never depend on each other</li>
+          <li>go-auth: JWT access/refresh lifecycle with rotation and revocation, Argon2id hashing, RBAC, adapters for Gin, Echo and Fiber, and PostgreSQL, SQLite and in-memory storage</li>
+          <li>Test-first: 100% coverage on go-paginate, 96% on go-events, ~74% on the go-auth core</li>
         </ul>
-        <a href="https://github.com/go-thin" class="card-link" target="_blank" rel="noopener">View on GitHub -></a>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">memex</span>
-          <span class="card-year">2026</span>
+        <div class="project-foot">
+          <div class="tags"><span class="tag">Go</span><span class="tag">PostgreSQL</span><span class="tag">SQLite</span></div>
+          <a href="https://github.com/go-thin" class="card-link" target="_blank" rel="noopener">GitHub -></a>
         </div>
-        <p class="card-subtitle">Persistent Memory for Coding Agents &nbsp;-&nbsp; Python, MCP, SQLite</p>
-        <ul class="card-points">
-          <li>MCP server that gives coding agents persistent, per-project memory so context survives between sessions</li>
-          <li>5 MCP tools over local SQLite + FTS5 full-text search, with relevance retrieval by keyword and file-path match - fully local, no cloud, no LLM calls</li>
-          <li>Open-sourced (MIT), pip-installable, with merged pull requests from external contributors</li>
+      </article>
+
+      <article class="project">
+        <div class="project-top"><span class="project-kind">Open source / Dev tools</span><span class="project-year">2026</span></div>
+        <h3 class="project-title">memex</h3>
+        <p class="project-summary">Persistent, per-project memory for coding agents.</p>
+        <ul class="project-points">
+          <li>MCP server that keeps context alive between agent sessions</li>
+          <li>5 MCP tools over local SQLite + FTS5, with retrieval by keyword and file-path match - fully local, no cloud, no LLM calls</li>
+          <li>MIT-licensed, pip-installable, with merged pull requests from external contributors</li>
         </ul>
-        <a href="https://github.com/pragneshbagary" class="card-link" target="_blank" rel="noopener">View on GitHub -></a>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Vista</span>
-          <span class="card-year">2025</span>
+        <div class="project-foot">
+          <div class="tags"><span class="tag">Python</span><span class="tag">MCP</span><span class="tag">SQLite</span></div>
+          <a href="https://github.com/pragneshbagary" class="card-link" target="_blank" rel="noopener">GitHub -></a>
         </div>
-        <p class="card-subtitle">Personal RAG Chatbot &nbsp;-&nbsp; Python, FastAPI, Pinecone</p>
-        <ul class="card-points">
-          <li>Production-style RAG pipeline: ingestion, chunking, embeddings, vector retrieval, and response orchestration on a FastAPI backend</li>
+      </article>
+
+      <article class="project">
+        <div class="project-top"><span class="project-kind">Project / LLM</span><span class="project-year">2025</span></div>
+        <h3 class="project-title">Vista</h3>
+        <p class="project-summary">Personal RAG chatbot on a FastAPI backend.</p>
+        <ul class="project-points">
+          <li>Production-style pipeline: ingestion, chunking, embeddings, vector retrieval and response orchestration</li>
           <li>721 records indexed in Pinecone with namespace isolation and metadata-driven source attribution</li>
-          <li>Intent-aware query routing (direct vs. retrieval-augmented) to keep responses grounded</li>
+          <li>Intent-aware query routing (direct vs. retrieval-augmented) keeps responses grounded</li>
         </ul>
-        <a href="https://github.com/pragneshbagary" class="card-link" target="_blank" rel="noopener">View on GitHub -></a>
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title">Soft-TAC Replication</span>
-          <span class="card-year">2026</span>
+        <div class="project-foot">
+          <div class="tags"><span class="tag">Python</span><span class="tag">FastAPI</span><span class="tag">Pinecone</span></div>
+          <a href="https://github.com/pragneshbagary" class="card-link" target="_blank" rel="noopener">GitHub -></a>
         </div>
-        <p class="card-subtitle">Reward-Learning Research &nbsp;-&nbsp; Python, PyTorch</p>
-        <ul class="card-points">
-          <li>Reimplemented the LunarLander reward-learning experiment from a 2026 RL paper to test its Soft-TAC loss claim directly</li>
-          <li>Built a synthetic ground-truth pipeline, DQN dataset generation, and a label-noise sweep with seed-controlled evaluation</li>
-          <li>Found and reported a scale-dependent effect - separating results that survived a second look from those that didn't</li>
+      </article>
+
+      <article class="project">
+        <div class="project-top"><span class="project-kind">Research / RL</span><span class="project-year">2026</span></div>
+        <h3 class="project-title">Soft-TAC Replication</h3>
+        <p class="project-summary">Reward-learning experiment from a 2026 RL paper, reimplemented.</p>
+        <ul class="project-points">
+          <li>Reimplemented the LunarLander experiment to test the Soft-TAC loss claim directly</li>
+          <li>Synthetic ground-truth pipeline, DQN dataset generation, and a seed-controlled label-noise sweep</li>
+          <li>Found and reported a scale-dependent effect, separating results that survived a second look from those that didn't</li>
         </ul>
-        <a href="blog/soft-tac-lunarlander.html" class="card-link">Read the write-up -></a>
-      </div>
+        <div class="project-foot">
+          <div class="tags"><span class="tag">Python</span><span class="tag">PyTorch</span></div>
+          <a href="blog/soft-tac-lunarlander.html" class="card-link">Read the write-up -></a>
+        </div>
+      </article>
 
     </div>
   </div>
