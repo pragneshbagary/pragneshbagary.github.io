@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Alignment Fingerprints: A Per-Dimension Decomposition of Reward Alignment - Pragnesh Bagary</title>
+  <title>TAC Fingerprints: A Per-Dimension Decomposition of Reward Alignment - Pragnesh Bagary</title>
   <meta name="description" content="Decomposing the Trajectory Alignment Coefficient into exact per-dimension Shapley attributions that localize reward misspecification, with experiments mapping where the diagnostic works and where it fails silently.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -63,6 +63,15 @@
       line-height: 1.35;
     }
     .prose h2::before { content: '# '; color: var(--accent); font-family: var(--mono); font-weight: 500; font-size: .9em; }
+    .prose h3 {
+      font-family: var(--font); font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em;
+      color: var(--text); margin: 2.3rem 0 .85rem; line-height: 1.4;
+    }
+    .prose h3::before { content: '## '; color: var(--accent); font-family: var(--mono); font-weight: 500; font-size: .9em; opacity: .75; }
+    .prose p > strong:first-child {
+      font-family: var(--font); font-size: .88em; font-weight: 700;
+      letter-spacing: -.005em; color: var(--text);
+    }
     .prose strong { font-weight: 600; }
     .prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
     .prose a:hover { text-decoration-thickness: 2px; }
@@ -77,6 +86,25 @@
     /* Display math should scroll on narrow screens rather than overflow */
     mjx-container[display="true"] { display: block; overflow-x: auto; overflow-y: hidden; max-width: 100%; padding: 2px 0; }
 
+    .correction {
+      font-family: var(--font); font-size: .95rem; line-height: 1.65;
+      background: #fff8f1; border: 1px solid #f0c9a0; border-left: 3px solid #d97706;
+      border-radius: 0 8px 8px 0; padding: 1.15rem 1.35rem; margin: 2rem 0; color: #7c4a12;
+    }
+    .correction .corr-tag {
+      display: block; font-family: var(--mono); font-size: .7rem; text-transform: uppercase;
+      letter-spacing: .12em; color: #b45309; margin-bottom: .55rem; font-weight: 600;
+    }
+    .correction a { color: #b45309; }
+    .correction p { margin-bottom: .7rem; }
+    .correction p:last-child { margin-bottom: 0; }
+    .retracted { color: var(--text-soft); }
+    .prose table.corr { border-collapse: collapse; width: 100%; font-family: var(--font);
+      font-size: .86rem; margin: 1.5rem 0; }
+    .prose table.corr th { text-align: left; font-weight: 600; color: var(--text-muted);
+      border-bottom: 1px solid var(--border-strong); padding: .5rem .8rem .5rem 0; }
+    .prose table.corr td { border-bottom: 1px solid var(--border); padding: .5rem .8rem .5rem 0;
+      color: var(--text-muted); }
     .callout {
       font-family: var(--font); font-size: .98rem; line-height: 1.65;
       background: var(--accent-soft); border-left: 3px solid var(--accent);
@@ -125,9 +153,23 @@
       <span>2026</span>
       <span>Original research</span>
     </div>
-    <h1 class="post-title">Alignment fingerprints: a per-dimension decomposition of reward alignment</h1>
+    <h1 class="post-title">TAC fingerprints: a per-dimension decomposition of reward alignment</h1>
     <p class="post-standfirst">A single alignment score can tell a reward designer that something is wrong, but not what. This post decomposes the Trajectory Alignment Coefficient into exact per-dimension Shapley attributions, then maps where the resulting diagnostic localizes reward misspecification and where it provably cannot.</p>
   </header>
+  <div class="article" style="padding-top:1.6rem">
+    <div class="correction">
+      <span class="corr-tag">Correction &middot; September 2026</span>
+      <p><b>The central claim of this post does not hold.</b> Later work showed that the decomposition
+      assigns negative attributions to correctly specified dimensions of the ground-truth reward itself,
+      so the decision rule this post is built on &mdash; a negative value indicates a sign error &mdash;
+      fires on a reward that is perfectly aligned by construction. The 8-of-8 localization result is an
+      artifact of corrupting one dimension at a time; under a protocol that perturbs every dimension,
+      localization at eight dimensions falls to roughly chance.</p>
+      <p>The original text is left unaltered below. <a href="#what-was-wrong">What was wrong, and what
+      replaced it</a> sets out the evidence and the corrected method.</p>
+    </div>
+  </div>
+
 
   <div class="prose">
 
@@ -140,7 +182,7 @@
       its value as a diagnostic. A designer who sees \(\mathrm{TAC} = 0.6\) learns that the reward disagrees
       with the human somewhere, but not where. Since the reward in my setup is a vector of eight interpretable
       feature weights, the natural question is whether the agreement computation can be attributed to
-      individual dimensions: an alignment fingerprint rather than an alignment score.
+      individual dimensions: a TAC fingerprint rather than an alignment score.
     </p>
     <p>
       This post develops that decomposition and evaluates it against a known ground truth. Some of what
@@ -189,7 +231,7 @@
     <p>
       The simplest candidate decomposition is univariate: compute
       \(u_k = \tau_b\big(\operatorname{sign}(\Delta\Phi_k),\, y\big)\), the agreement between feature \(k\)
-      alone and the human's preference labels. It is cheap, it needs no candidate reward, and on this data it
+      alone and the preference labels. It is cheap, it needs no candidate reward, and on this data it
       gets a sign backwards.
     </p>
     <p>
@@ -292,7 +334,7 @@
       In LunarLander, the feature correlations are fixed by the physics and by the behavior of the DQN
       checkpoints. To test the confound explanation directly, I built a 9x9 gridworld in which a mixing
       fraction \(m\) controls what share of item-B tiles are placed on top of item-A tiles. The ground-truth
-      reward values A and assigns B a weight of exactly zero, so B is worthless to the human. A spurious
+      reward values A and assigns B a weight of exactly zero, so B is worthless to the labeler. A spurious
       candidate reward pays +2 for B anyway, and the question is whether any diagnostic can detect that.
     </p>
     <p>
@@ -353,7 +395,7 @@
     <p>
       I tested a complementary heuristic for omissions: flag the dimension with the largest gap between its
       univariate alignment and its Shapley contribution, on the reasoning that an omitted feature predicts the
-      human's preferences while contributing nothing to the reward's agreement. The heuristic does not work.
+      preference labels while contributing nothing to the reward's agreement. The heuristic does not work.
       Its gap score is dominated by each dimension's baseline value, which is present even when nothing is
       omitted, so it flags nearly the same dimension regardless of which one was zeroed, and its apparent
       successes are just that constant default happening to land on the right answer. Omission detection remains unsolved in this setup, not partially solved. This failure is
@@ -406,34 +448,158 @@
       ground-truth answer key could be constructed.
     </p>
 
-    <h2>Summary of results</h2>
+    <h2 id="what-was-wrong">What was wrong, and what replaced it</h2>
+    <div class="correction">
+      <span class="corr-tag">Added September 2026</span>
+      <p>Everything above this heading is the post as originally published in July 2026. This section
+      records what did not survive, and is written from the follow-up experiments rather than from a
+      re-reading of the original argument.</p>
+    </div>
+
+    <h3>The decomposition fails its own null test</h3>
     <p>
-      <strong>Supported by the experiments.</strong> Exact Shapley attribution of TAC localizes sign-flipped
-      reward dimensions reliably on standardized features, including flips too small for the scalar to
-      register, and the result holds across regenerated trajectory pools, small preference budgets, and
-      uniform label noise. The attribution also corrects a genuine sign confound that univariate screening
-      gets backwards. Detection of a spurious term on a correlated worthless feature fails above a correlation
-      threshold; that threshold rises with the magnitude of the spurious term, and the failure above it is
-      silent rather than loud.
+      The decision rule in this post is that a clearly negative \(F_k\) indicates a sign error. The test
+      that rule never faced is the null one: run the fingerprint on \(w^{*}\) itself, where
+      \(\mathrm{TAC} = 1\) exactly and nothing is misspecified. Every dimension should then be
+      non-negative. Recomputing the Shapley values from the coalition tables already saved in the
+      repository:
+    </p>
+    <table class="corr">
+      <thead><tr><th>Configuration</th><th>TAC(w*)</th><th>Dimensions with \(F_k &lt; 0\) at \(w^{*}\)</th></tr></thead>
+      <tbody>
+        <tr><td>standardized, pool 1</td><td>1.0000</td><td><code>main_eng</code> &minus;0.0087</td></tr>
+        <tr><td>standardized, pool 2</td><td>1.0000</td><td><code>main_eng</code> &minus;0.0150</td></tr>
+        <tr><td>raw features</td><td>1.0000</td><td><code>d_speed</code> &minus;0.0525, <code>d_tilt</code> &minus;0.0096, <code>crash</code> &minus;0.1006</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Three of the four configurations reported in this post flag a sign error in a reward that has none.
+      The raw-feature row is the sharper one, because <code>crash</code> receiving &minus;0.1006 at
+      \(w^{*}\) is the same number this post presents, a few sections earlier, as the fingerprint
+      correctly identifying the crash confound. It is not a correction of the univariate baseline. It is
+      the null test failing.
     </p>
     <p>
-      <strong>Negative results.</strong> The fingerprint is structurally blind to omitted reward terms, and
-      the univariate-gap heuristic for detecting omissions degenerates into a near-constant flag. The
-      label-noise robustness is a \((1 - 2p)\) property of any rank-based method rather than a contribution of
-      this work. In the repair-loop benchmark as configured, exhaustive greedy search is the better repair
-      policy.
-    </p>
-    <p>
-      <strong>Not claimed.</strong> Any conclusion about the fingerprints of learned rewards versus their true
-      recovery. That question stays open until the recovery instability across pools (cosine similarity from
-      0.70 to 0.96 at near-identical TAC) is understood.
+      The underlying conceptual error is a conflation. \(F_k\) measures how much the term
+      \(w_k f_k\) changes agreement when added to a coalition. It does not measure whether \(w_k\)
+      has the right sign. A negative \(F_k\) says the term lowers agreement in context, which can happen
+      to a correctly specified dimension whenever it trades off against others; reading it as
+      misspecification requires already knowing what the weight should have been, which is the thing the
+      diagnostic was supposed to tell you.
     </p>
 
-    <h2>Code and paper</h2>
+    <p>
+      One consequence is worth spelling out, because it lands on the case this post singles out as most
+      informative. Flipping <code>main_eng</code> moves the scalar TAC by only 0.003, and the fingerprint
+      still returns <code>main_eng</code> as the minimum, which the post reads as sensitivity the scalar
+      does not have. But <code>main_eng</code> is <em>already</em> the minimum at \(w^{*}\), before any
+      dimension is flipped, on all three standardized pools (\(-0.0087\), \(+0.0056\), \(-0.0150\)).
+      The diagnostic returns that dimension whether or not it has been corrupted, so that case carries no
+      information. The apparent success is a constant default landing on the right answer &mdash; precisely
+      the failure this post correctly diagnoses in the univariate-gap heuristic for omissions, a few
+      sections above, and does not apply to its own headline result.
+    </p>
+
+    <h3>The localization protocol hands over the answer</h3>
+    <p>
+      The 8-of-8 result flips one dimension of \(w^{*}\) and leaves the other seven exactly correct.
+      That is not how a hand-designed reward is wrong. Re-running with every dimension perturbed by
+      15&ndash;30% and one corrupted more severely, at eight dimensions on the real feature matrix, the
+      removal-game attribution used here lands in the range of <b>19&ndash;28%</b> &mdash; near chance for
+      eight dimensions. Dimensionality is not the cause: the same protocol with synthetic independent
+      features and an exact reference scores 100%, and real feature correlation costs only about nine
+      points. The loss comes from the reference, not from the geometry.
+    </p>
+
+    <h3>It is blind to magnitude errors</h3>
+    <p>
+      A removal game asks whether a feature is useful, not whether its weight is the right size. On a seed
+      sweep where the corruption is a magnitude error rather than a sign flip, the attribution identifies
+      the corrupted dimension in <b>0 of 8</b> cases. This is the more likely failure in practice: the
+      Soft-TAC paper notes that the eight components' magnitudes vary considerably. The post tested only
+      the failure mode the method can see.
+    </p>
+
+    <h3>Two structural problems with the game</h3>
+    <p>
+      The empty coalition zeroes every weight, so every trajectory pair ties and Kendall's \(\tau_b\) is
+      \(0/0\). Setting \(v(\emptyset) = 0\) is a convention, not a measurement, which means the
+      efficiency property this post leans on &mdash; that the values sum to TAC &mdash; is splitting a
+      bounded scalar across eight players by fiat. Separately, \(\tau_b\)'s normalizer counts pairs left
+      untied by the reward, and zeroing weights manufactures ties, so the denominator changes with every
+      coalition and each marginal contribution mixes a genuine change in agreement with a rescaling
+      artifact.
+    </p>
+
+    <h3>What replaced it</h3>
+    <p>
+      The repair is to stop removing dimensions and start swapping them: define
+      \(v(S) = \mathrm{TAC}(w \text{ with dimensions outside } S \text{ set to } w^{*})\). The empty
+      coalition is then \(\mathrm{TAC}(w^{*})\) rather than a tie, no ties are manufactured, and the
+      quantity being divided is the alignment deficit \(\mathrm{TAC}(w) - \mathrm{TAC}(w^{*})\), which
+      has a meaning the naive total does not.
+    </p>
+    <p>
+      That method is better but its first results were also overstated, and the same protocol artifact is
+      why. Corrupting a single coordinate makes every other dimension a literal null player, so the
+      attribution is \((0,\dots,\mathrm{TAC}(w) - \mathrm{TAC}(w^{*}),\dots,0)\) exactly, with a
+      perfect margin on any dataset &mdash; an algebraic identity rather than a detection result. Under the
+      all-dimensions-perturbed protocol it localizes correctly about 75&ndash;90% of the time with a good
+      reference, and its accuracy is governed almost entirely by the quality of \(w^{*}\) rather than by
+      dimensionality, feature correlation, or label noise. Below roughly
+      \(\mathrm{TAC}(w^{*}) \approx 0.77\) the alignment deficit inverts sign and the decomposition is
+      explaining a deficit that does not exist, so held-out \(\mathrm{TAC}(w^{*})\) has to be reported
+      as a gate before any attribution is interpreted.
+    </p>
+    <p>
+      A note on what stands. The feature-scale finding, the identifiability boundary under correlation, and
+      the structural blindness to omitted terms do not depend on the decision rule and are unaffected. The
+      recovery instability &mdash; near-identical TAC at cosine similarity ranging from 0.70 to 0.96 &mdash;
+      also stands, and is the observation from this post I would now treat as the most durable.
+    </p>
+
+    <h2>Summary of results</h2>
+    <div class="correction">
+      <span class="corr-tag">Revised September 2026</span>
+      <p>The original version of this section listed the localization result as supported. It is not.
+      See <a href="#what-was-wrong">What was wrong</a>; the summary below is the corrected one.</p>
+    </div>
+    <p>
+      <strong>Retracted.</strong> That exact Shapley attribution of TAC localizes sign-flipped reward
+      dimensions. The 8-of-8 figure came from corrupting one dimension at a time; under an
+      all-dimensions-perturbed protocol the method is near chance at eight dimensions, and it fails its own
+      null test, assigning negative attributions to correctly specified dimensions of \(w^{*}\). The claim
+      that the attribution corrects the univariate crash confound is retracted with it: the negative value
+      on <code>crash</code> is an instance of the null-test failure, not a correction of it.
+    </p>
+    <p>
+      <strong>Stands.</strong> The feature-scale finding &mdash; that on raw features the two engine
+      dimensions absorb 0.82 of the attribution mass, so the labeler is mostly ranking by fuel usage while
+      the scalar TAC reads 1.0. The identifiability boundary under correlation, including that the threshold
+      rises with the magnitude of the spurious term and that the failure above it is silent. The structural
+      blindness to omitted terms, which follows from the null-player axiom and does not depend on the
+      decision rule. The failure of the univariate-gap heuristic. That the label-noise robustness is a
+      \((1 - 2p)\) property of any rank-based method rather than a contribution of this work. That greedy
+      search is the better repair policy on this benchmark.
+    </p>
+    <p>
+      <strong>Also blind to magnitude errors.</strong> Not tested in the original post. A removal game asks
+      whether a feature is useful, not whether its weight is the right size; on a magnitude-corruption seed
+      sweep the attribution scores 0 of 8.
+    </p>
+    <p>
+      <strong>Not claimed.</strong> Any conclusion about the fingerprints of learned rewards versus their
+      true recovery. That question stays open, and the recovery instability across pools &mdash; cosine
+      similarity from 0.70 to 0.96 at near-identical TAC &mdash; is the part of this post I would now treat
+      as its most durable observation.
+    </p>
+
+    <h2>Code</h2>
     <p>
       Code and data are available at
       <a href="https://github.com/pragneshbagary/alignment-fingerprints" target="_blank" rel="noopener">github.com/pragneshbagary/alignment-fingerprints</a>.
-      A paper version of this work is in preparation; I will add the arXiv link here when it is available.
+      The experiments run and reproduce; what changed is the interpretation of what they show, and the
+      repository's README carries the same correction as this post.
     </p>
 
   </div>

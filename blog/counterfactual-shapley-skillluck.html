@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reimplementing Counterfactual Shapley Credit Assignment - Pragnesh Bagary</title>
+  <meta name="description" content="An independent reimplementation of the SkillLuck experiment from Counterfactual Shapley Credit Assignment: building the counterfactual rollout and Shapley estimator, finding a bias in the antithetic sampling, and comparing φ-PPO against PPO over 50 seeds.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-subtle: #f7f8fa;
+      --text: #1a2231;
+      --text-muted: #4b5566;
+      --text-soft: #94a3b8;
+      --accent: #2563eb;
+      --accent-soft: #eff4ff;
+      --border: #e8eaee;
+      --border-strong: #d9dce2;
+      --font: 'Inter', system-ui, -apple-system, sans-serif;
+      --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+      --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--font); color: var(--text); background: var(--bg); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+    /* Nav */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.82); backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
+      border-bottom: 1px solid var(--border); height: 62px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 max(1.5rem, calc((100% - 720px) / 2 + 1.5rem));
+    }
+    .nav-name { font-weight: 700; font-size: .95rem; color: var(--text); text-decoration: none; }
+    .nav-links { list-style: none; display: flex; gap: 1.8rem; }
+    .nav-links a { font-size: .875rem; font-weight: 500; color: var(--text-muted); text-decoration: none; transition: color .15s; }
+    .nav-links a:hover { color: var(--accent); }
+
+    /* Reading progress */
+    #progress { position: fixed; top: 0; left: 0; height: 3px; width: 0; background: var(--accent); z-index: 200; transition: width .1s linear; }
+
+    .article { max-width: 720px; margin: 0 auto; padding: 0 1.5rem; }
+
+    /* Header */
+    .post-head { padding: 3.5rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2.5rem; }
+    .post-meta { font-family: var(--mono); font-size: .75rem; color: var(--text-soft); display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.1rem; }
+    .post-meta .tag { color: var(--accent); }
+    .post-title { font-size: clamp(2rem, 5vw, 2.9rem); font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+    .post-standfirst { font-family: var(--serif); font-size: 1.2rem; color: var(--text-muted); line-height: 1.6; margin-top: 1.1rem; }
+
+    /* Prose */
+    .prose { font-family: var(--serif); font-size: 1.18rem; line-height: 1.75; color: var(--text); }
+    .prose p { margin-bottom: 1.4rem; }
+    .prose h2 {
+      font-family: var(--font); font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em;
+      color: var(--text); margin: 2.8rem 0 1.1rem; padding-top: .4rem;
+      line-height: 1.35;
+    }
+    .prose h2::before { content: '# '; color: var(--accent); font-family: var(--mono); font-weight: 500; font-size: .9em; }
+    .prose h3 {
+      font-family: var(--font); font-size: 1.02rem; font-weight: 700; letter-spacing: -.01em;
+      color: var(--text); margin: 2.3rem 0 .85rem; line-height: 1.4;
+    }
+    .prose h3::before { content: '## '; color: var(--accent); font-family: var(--mono); font-weight: 500; font-size: .9em; opacity: .75; }
+    .prose strong { font-weight: 600; }
+    .prose a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }
+    .prose a:hover { text-decoration-thickness: 2px; }
+    .prose code, .var { font-family: var(--mono); font-size: .82em; background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 4px; padding: .08rem .32rem; color: var(--text); }
+    .prose ul { margin: 0 0 1.4rem 1.3rem; }
+    .prose li { margin-bottom: .5rem; }
+
+    .callout {
+      font-family: var(--font); font-size: .98rem; line-height: 1.65;
+      background: var(--accent-soft); border-left: 3px solid var(--accent);
+      border-radius: 0 8px 8px 0; padding: 1.1rem 1.3rem; margin: 2rem 0; color: var(--text-muted);
+    }
+
+    /* References */
+    .refs { font-family: var(--font); border-top: 1px solid var(--border); margin-top: 3.5rem; padding: 2.5rem 0 1rem; }
+    .refs h2 { font-size: .8rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); margin-bottom: 1.2rem; }
+    .refs p { font-size: .9rem; color: var(--text-muted); line-height: 1.65; margin-bottom: 1rem; }
+    .refs a { color: var(--accent); text-decoration: none; word-break: break-word; }
+    .refs a:hover { text-decoration: underline; }
+
+    /* Post footer */
+    .post-foot { border-top: 1px solid var(--border); margin-top: 1rem; padding: 2rem 0 4rem; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+    .post-foot a { font-size: .88rem; font-weight: 600; color: var(--accent); text-decoration: none; }
+    .post-foot a:hover { text-decoration: underline; }
+
+    @media (max-width: 560px) {
+      .nav-links { gap: 1.1rem; }
+      .prose { font-size: 1.1rem; }
+      .post-standfirst { font-size: 1.08rem; }
+    }
+
+    /* Figures */
+    .prose figure { margin: 2.4rem 0; }
+    .prose figure img { display: block; width: 100%; border: 1px solid var(--border); border-radius: 10px; }
+    .prose figure.diagram { border: 1px solid var(--border); border-radius: 10px; padding: 1.1rem 1.2rem .4rem; background: var(--bg); }
+    .prose figure.diagram svg { display: block; width: 100%; height: auto; }
+    .prose figcaption { font-family: var(--font); font-size: .82rem; color: var(--text-soft); margin-top: .9rem; line-height: 1.6; }
+    .prose figure.diagram figcaption { border-top: 1px solid var(--border); padding: .8rem 0 .9rem; margin-top: .6rem; }
+    .prose figcaption b { color: var(--text-muted); font-weight: 600; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; margin: 1.9rem 0; }
+    .prose table { border-collapse: collapse; width: 100%; font-family: var(--font); font-size: .88rem; }
+    .prose thead th { text-align: left; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border-strong); padding: .55rem .8rem .55rem 0; white-space: nowrap; }
+    .prose tbody td { border-bottom: 1px solid var(--border); padding: .55rem .8rem .55rem 0; color: var(--text-muted); vertical-align: top; }
+    .prose tbody tr:last-child td { border-bottom: none; }
+    .prose td code, .prose th code { font-size: .92em; }
+
+    /* Code blocks */
+    .prose pre { background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 8px;
+      padding: .95rem 1.1rem; overflow-x: auto; margin: 1.6rem 0; font-size: .8rem; line-height: 1.65; }
+    .prose pre code { font-family: var(--mono); font-size: 1em; line-height: inherit; background: none;
+      border: none; padding: 0; color: var(--text); white-space: pre; }
+
+    /* Math */
+    mjx-container[display="true"] { margin: 1.6rem 0 !important; overflow-x: auto; overflow-y: hidden; padding: .2rem 0; }
+    mjx-container { font-size: .98em !important; }
+
+    .prose p.orient { font-family: var(--font); font-size: .95rem; line-height: 1.7;
+      color: var(--text-muted); background: var(--bg-subtle); border: 1px solid var(--border);
+      border-radius: 8px; padding: 1.1rem 1.3rem; margin-bottom: 2.2rem; }
+
+
+    /* Run-in labels: same family as the headings, one step below them,
+       so a labelled paragraph never outweighs the heading it sits under.
+       Scoped to a paragraph's first child so inline <strong> is untouched. */
+    .prose p > strong:first-child {
+      font-family: var(--font); font-size: .88em; font-weight: 700;
+      letter-spacing: -.005em; color: var(--text);
+    }
+
+    .refs ol { font-size: .9rem; color: var(--text-muted); line-height: 1.65; margin: 0 0 1.6rem 1.2rem; }
+    .refs li { margin-bottom: .75rem; padding-left: .2rem; }
+  </style>
+
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$', '$']], displayMath: [['$$', '$$']], processEscapes: true },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre','code'] },
+      chtml: { scale: 1.0 }
+    };
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js"></script>
+<!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "ac645113654b4b7487eff1b09cdeae7e"}'></script><!-- End Cloudflare Web Analytics -->
+</head>
+<body>
+
+<div id="progress"></div>
+
+<nav>
+  <a href="../index.html" class="nav-name">Pragnesh Bagary</a>
+  <ul class="nav-links">
+    <li><a href="../index.html">Home</a></li>
+    <li><a href="../resume.html">Resume</a></li>
+    <li><a href="index.html">Blog</a></li>
+  </ul>
+</nav>
+
+<article class="article">
+
+  <header class="post-head">
+    <div class="post-meta">
+      <span class="tag">reinforcement learning</span>
+      <span>2026</span>
+      <span>Reimplementation</span>
+    </div>
+    <h1 class="post-title">Reimplementing Counterfactual Shapley Credit Assignment</h1>
+    <p class="post-standfirst">A reimplementation of the SkillLuck experiment from Li, Lee and Bareinboim's Counterfactual Shapley Credit Assignment paper, building the counterfactual rollout and Shapley estimator, finding a bias in the antithetic sampling, and comparing φ-PPO against PPO over 50 seeds.</p>
+  </header>
+
+  <div class="prose">
+<p class="orient">
+  This is long, and not meant to be read straight through. The theory is introduced where the
+  implementation needs it, so the sections are roughly in build order: the
+  <a href="#the-environment">environment</a> and
+  <a href="#what-exactly-should-the-credit-measure">what credit should mean</a>, then the
+  <a href="#building-the-counterfactual-rollout">counterfactual rollout</a> and the
+  <a href="#from-counterfactual-effects-to-shapley-credit">Shapley estimator</a>. The two results I would
+  point a reader at are the <a href="#the-antithetic-sampling-problem">antithetic sampling bias</a>, where
+  an exact oracle at a small horizon caught an error that more samples could never have fixed, and
+  <a href="#reconciling-with-the-paper">reconciling with the paper</a>, which separates what reproduced
+  from what did not.
+</p>
+
+<h2 id="the-environment">The environment</h2>
+<p>SkillLuck is deliberately simple. The dynamics are not what make the task difficult; the challenge is that the reward does not tell you very much about which actions caused it.</p>
+<p>At the first timestep the agent selects a branch: action <code>0</code> → <strong>Skill</strong>, action <code>1</code> → <strong>Luck</strong>. On the Skill branch it faces one consequential decision at $t = T-1$ (index 98 in my zero-based implementation), where action <code>1</code> yields reward 1 and action <code>0</code> yields 0. On the Luck branch the reward is drawn from $\mathrm{Bern}(0.5)\cdot\gamma^{T-3}$ at step 2, regardless of any subsequent action; the $\gamma^{T-3}$ scaling equalizes the two branches' return magnitudes. The remaining 98 timesteps are inert. Every step adds i.i.d. Gaussian reward noise $\mathcal{N}(0, \sigma^2)$.</p>
+<figure class="diagram">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 330" class="fig" role="img" aria-label="SkillLuck MDP. The first action selects the skill or luck branch. On the skill branch the final action x99 determines the reward; on the luck branch the reward is an exogenous Bernoulli variable realised at t = 2 and is independent of all later actions.">
+<style>
+  .fig { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .fig text { fill: #1a2231; }
+  .ink { fill: #1a2231; } .muted { fill: #4b5566; } .soft { fill: #94a3b8; }
+  .acc { fill: #2563eb; } .warm { fill: #b45309; } .bad { fill: #b91c1c; }
+  .s-ink { stroke: #1a2231; } .s-soft { stroke: #cbd2dc; }
+  .s-acc { stroke: #2563eb; } .s-warm { stroke: #d97706; } .s-bad { stroke: #b91c1c; }
+  .node { fill: #ffffff; stroke: #cbd2dc; stroke-width: 1.5; }
+  .panel { fill: #f7f8fa; stroke: #e8eaee; stroke-width: 1; }
+  .ttl { font-size: 12.5px; font-weight: 600; }
+  .lbl { font-size: 12px; } .sm { font-size: 11.5px; } .xs { font-size: 10.5px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .b { font-weight: 600; }
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+<rect x="14" y="20" width="176" height="44" rx="6" class="panel"/>
+<text x="26" y="38" class="xs muted">Environment noise, every step</text>
+<text x="26" y="55" class="xs b ink mono">Y<tspan baseline-shift="sub" font-size="0.72em">t</tspan> += 𝒩(0, σ²),  σ = 3</text>
+
+<text x="66" y="204" text-anchor="middle" class="xs soft mono">t = 1</text>
+<circle cx="66" cy="170" r="17" class="node s-ink" stroke-width="2"/>
+<text x="66" y="175" text-anchor="middle" class="sm b ink">s₁</text>
+
+<path d="M80 160 C 118 160, 124 100, 158 100" fill="none" class="s-acc" stroke-width="2.25" marker-end="url(#ah)"/>
+<text x="90" y="128" class="sm b acc mono">x₁ = 0</text>
+<circle cx="174" cy="100" r="15" class="node s-acc"/><text x="174" y="104" text-anchor="middle" class="xs muted">s₂</text>
+<line x1="191" y1="100" x2="231" y2="100" class="s-soft" stroke-width="1.5" stroke-dasharray="1 5" stroke-linecap="round"/>
+<circle cx="256" cy="100" r="15" class="node"/><text x="256" y="105" text-anchor="middle" class="sm soft">⋯</text>
+<line x1="281" y1="100" x2="321" y2="100" class="s-soft" stroke-width="1.5" stroke-dasharray="1 5" stroke-linecap="round"/>
+<circle cx="338" cy="100" r="16" class="node s-acc" stroke-width="2.25"/><text x="338" y="104" text-anchor="middle" class="xs muted">s₉₉</text>
+<path d="M356 93 C 396 86, 404 64, 434 64" fill="none" class="s-acc" stroke-width="2.25" marker-end="url(#ah)"/>
+<path d="M356 108 C 396 114, 404 136, 434 136" fill="none" class="s-soft" stroke-width="1.5" marker-end="url(#ah)"/>
+<text x="374" y="60" class="sm b acc mono">x₉₉ = 1</text>
+<text x="374" y="152" class="sm soft mono">x₉₉ = 0</text>
+<rect x="440" y="48" width="76" height="31" rx="6" class="panel" style="stroke:#2563eb"/>
+<text x="478" y="68" text-anchor="middle" class="lbl b acc mono">Y = 1</text>
+<rect x="440" y="120" width="76" height="31" rx="6" class="panel"/>
+<text x="478" y="140" text-anchor="middle" class="lbl soft mono">Y = 0</text>
+<text x="532" y="94" class="ttl acc">Skill branch</text>
+<text x="532" y="112" class="xs muted">Reward determined by x₉₉</text>
+<text x="532" y="128" class="xs muted">Causal actions: x₁, x₉₉</text>
+
+<path d="M80 180 C 118 180, 124 240, 158 240" fill="none" class="s-warm" stroke-width="2.25" marker-end="url(#ah)"/>
+<text x="90" y="232" class="sm b warm mono">x₁ = 1</text>
+<circle cx="174" cy="240" r="15" class="node s-warm" stroke-width="2.25"/><text x="174" y="244" text-anchor="middle" class="xs muted">s′₂</text>
+<line x1="191" y1="240" x2="231" y2="240" class="s-soft" stroke-width="1.5" stroke-dasharray="1 5" stroke-linecap="round"/>
+<circle cx="256" cy="240" r="15" class="node"/><text x="256" y="245" text-anchor="middle" class="sm soft">⋯</text>
+<line x1="281" y1="240" x2="321" y2="240" class="s-soft" stroke-width="1.5" stroke-dasharray="1 5" stroke-linecap="round"/>
+<circle cx="338" cy="240" r="15" class="node"/><text x="338" y="244" text-anchor="middle" class="xs soft">s′₉₉</text>
+<line x1="355" y1="240" x2="430" y2="240" class="s-soft" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#ah)"/>
+<text x="392" y="231" text-anchor="middle" class="sm soft mono">∀ x₉₉</text>
+<rect x="440" y="224" width="76" height="31" rx="6" class="panel" style="stroke:#d97706"/>
+<text x="478" y="244" text-anchor="middle" class="lbl b warm mono">Y = 1</text>
+<text x="532" y="234" class="ttl warm">Luck branch</text>
+<text x="532" y="252" class="xs muted">Reward determined by U<tspan baseline-shift="sub" font-size="0.72em">luck</tspan></text>
+<text x="532" y="268" class="xs muted">Causal action: x₁</text>
+
+<path d="M174 257 L174 276" class="s-warm" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="174" cy="276" r="2.5" class="warm"/>
+<text x="150" y="294" class="xs b warm mono">Y ~ Bern(0.5) · γ&#7488;⁻³,  realised at t = 2</text>
+<text x="150" y="310" class="xs soft">Independent of x₂, …, x₉₉</text>
+
+<line x1="199" y1="118" x2="199" y2="222" class="s-soft" stroke-width="1" stroke-dasharray="3 4"/>
+<line x1="313" y1="118" x2="313" y2="222" class="s-soft" stroke-width="1" stroke-dasharray="3 4"/>
+<text x="256" y="167" text-anchor="middle" class="xs soft">Non-causal actions,</text>
+<text x="256" y="181" text-anchor="middle" class="xs soft mono">t = 2, …, T−2</text>
+</svg>
+<figcaption><b>Figure 1.</b> The SkillLuck MDP. The first action selects a branch. On the skill branch the final action determines the reward; on the luck branch the reward is an exogenous Bernoulli variable realised at t = 2, independent of every later action.</figcaption>
+</figure>
+<p>I used $T = 100$, $\gamma = 0.999$, $\sigma = 3$. The optimal policy takes Skill and then action <code>1</code>, for an expected discounted return of $\gamma^{98} \approx 0.9066$; Luck is worth $0.5\gamma^{98} \approx 0.4533$.</p>
+<p>Two properties of the environment are especially important for everything that follows.</p>
+<p><strong>The causal structure is sparse and branch-dependent.</strong> On the Skill branch exactly two actions are causal: $x_1$, which selects the branch, and $x_{T-1}$, which determines the reward. On the Luck branch there is exactly one: $x_1$. Everything after the branch choice on Luck is causally inert — the reward was already fixed by an exogenous coin flip. A correct attribution has to say so, and saying so is not something a method can fake, because the two branches are behaviourally identical apart from where the reward comes from.</p>
+<p><strong>The signal is buried.</strong> At $\sigma = 3$ the discounted noise has standard deviation</p>
+<p>$$\sigma\sqrt{\sum_{t=1}^{T}\gamma^{2(t-1)}} \approx 28.57$$</p>
+<p>against a signal of 0.9066 — a per-episode signal-to-noise ratio of about <strong>0.0317</strong>. Only two decisions are relevant, but the return is dominated by the noise. That is the setting in which a credit-assignment method has to recover a very small causal signal.</p>
+<p>These correspond to two of the settings the paper is trying to address. When only a small number of actions are causal, credit assigned to the remaining actions contributes variance without useful signal. And when the environment is stochastic, comparing separate trajectories mixes the effect of changing the action with the effect of drawing different environmental noise. The paper argues that the counterfactual construction addresses both. Delayed reward is the third setting, which I return to near the end.</p>
+<p>SkillLuck combines both of those difficulties, which is why it is a useful place to start.</p>
+<figure class="diagram">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 312" class="fig" role="img" aria-label="Return distributions of the skill and luck branches at sigma = 3, drawn to scale. The two distributions differ in mean by 0.4533 while the return standard deviation is 28.57.">
+<style>
+  .fig { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .fig text { fill: #1a2231; }
+  .ink { fill: #1a2231; } .muted { fill: #4b5566; } .soft { fill: #94a3b8; }
+  .acc { fill: #2563eb; } .warm { fill: #b45309; } .bad { fill: #b91c1c; }
+  .s-ink { stroke: #1a2231; } .s-soft { stroke: #cbd2dc; }
+  .s-acc { stroke: #2563eb; } .s-warm { stroke: #d97706; } .s-bad { stroke: #b91c1c; }
+  .node { fill: #ffffff; stroke: #cbd2dc; stroke-width: 1.5; }
+  .panel { fill: #f7f8fa; stroke: #e8eaee; stroke-width: 1; }
+  .ttl { font-size: 12.5px; font-weight: 600; }
+  .lbl { font-size: 12px; } .sm { font-size: 11.5px; } .xs { font-size: 10.5px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .b { font-weight: 600; }
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+<text x="58" y="26" class="ttl ink">Return distribution of each branch at σ = 3</text>
+<text x="58" y="44" class="xs muted">Drawn to scale. T = 100, γ = 0.999.</text>
+<path d="M58.0,235.4 L59.7,235.4 L61.4,235.3 L63.1,235.3 L64.9,235.2 L66.6,235.1 L68.3,235.0 L70.0,234.9 L71.7,234.8 L73.5,234.7 L75.2,234.6 L76.9,234.5 L78.6,234.4 L80.3,234.2 L82.0,234.1 L83.8,233.9 L85.5,233.7 L87.2,233.6 L88.9,233.4 L90.6,233.1 L92.3,232.9 L94.0,232.7 L95.8,232.4 L97.5,232.1 L99.2,231.8 L100.9,231.5 L102.6,231.2 L104.3,230.8 L106.1,230.4 L107.8,230.0 L109.5,229.6 L111.2,229.1 L112.9,228.6 L114.7,228.1 L116.4,227.6 L118.1,227.0 L119.8,226.4 L121.5,225.7 L123.2,225.1 L125.0,224.3 L126.7,223.6 L128.4,222.8 L130.1,222.0 L131.8,221.1 L133.5,220.2 L135.2,219.3 L137.0,218.3 L138.7,217.2 L140.4,216.1 L142.1,215.0 L143.8,213.8 L145.6,212.6 L147.3,211.3 L149.0,210.0 L150.7,208.6 L152.4,207.2 L154.1,205.7 L155.8,204.2 L157.6,202.6 L159.3,201.0 L161.0,199.3 L162.7,197.6 L164.4,195.8 L166.2,194.0 L167.9,192.1 L169.6,190.2 L171.3,188.2 L173.0,186.2 L174.7,184.1 L176.4,182.0 L178.2,179.8 L179.9,177.6 L181.6,175.4 L183.3,173.1 L185.0,170.8 L186.8,168.4 L188.5,166.0 L190.2,163.6 L191.9,161.2 L193.6,158.7 L195.3,156.3 L197.1,153.8 L198.8,151.3 L200.5,148.8 L202.2,146.2 L203.9,143.7 L205.6,141.2 L207.3,138.7 L209.1,136.2 L210.8,133.7 L212.5,131.2 L214.2,128.8 L215.9,126.4 L217.7,124.0 L219.4,121.6 L221.1,119.3 L222.8,117.0 L224.5,114.8 L226.2,112.7 L227.9,110.5 L229.7,108.5 L231.4,106.5 L233.1,104.6 L234.8,102.8 L236.5,101.0 L238.2,99.3 L240.0,97.7 L241.7,96.2 L243.4,94.8 L245.1,93.5 L246.8,92.3 L248.6,91.2 L250.3,90.2 L252.0,89.3 L253.7,88.5 L255.4,87.8 L257.1,87.2 L258.9,86.7 L260.6,86.4 L262.3,86.1 L264.0,86.0 L265.7,86.0 L267.4,86.1 L269.1,86.3 L270.9,86.7 L272.6,87.1 L274.3,87.7 L276.0,88.4 L277.7,89.1 L279.4,90.0 L281.2,91.0 L282.9,92.1 L284.6,93.3 L286.3,94.6 L288.0,96.0 L289.8,97.5 L291.5,99.1 L293.2,100.8 L294.9,102.5 L296.6,104.3 L298.3,106.2 L300.1,108.2 L301.8,110.2 L303.5,112.3 L305.2,114.5 L306.9,116.7 L308.6,119.0 L310.4,121.3 L312.1,123.6 L313.8,126.0 L315.5,128.4 L317.2,130.9 L318.9,133.3 L320.6,135.8 L322.4,138.3 L324.1,140.8 L325.8,143.4 L327.5,145.9 L329.2,148.4 L330.9,150.9 L332.7,153.4 L334.4,155.9 L336.1,158.4 L337.8,160.8 L339.5,163.3 L341.2,165.7 L343.0,168.1 L344.7,170.4 L346.4,172.8 L348.1,175.0 L349.8,177.3 L351.6,179.5 L353.3,181.7 L355.0,183.8 L356.7,185.9 L358.4,187.9 L360.1,189.9 L361.9,191.8 L363.6,193.7 L365.3,195.6 L367.0,197.3 L368.7,199.1 L370.4,200.8 L372.1,202.4 L373.9,204.0 L375.6,205.5 L377.3,207.0 L379.0,208.4 L380.7,209.8 L382.4,211.1 L384.2,212.4 L385.9,213.7 L387.6,214.8 L389.3,216.0 L391.0,217.1 L392.8,218.1 L394.5,219.1 L396.2,220.1 L397.9,221.0 L399.6,221.9 L401.3,222.7 L403.1,223.5 L404.8,224.2 L406.5,225.0 L408.2,225.6 L409.9,226.3 L411.6,226.9 L413.4,227.5 L415.1,228.0 L416.8,228.5 L418.5,229.0 L420.2,229.5 L421.9,229.9 L423.6,230.4 L425.4,230.7 L427.1,231.1 L428.8,231.5 L430.5,231.8 L432.2,232.1 L433.9,232.4 L435.7,232.6 L437.4,232.9 L439.1,233.1 L440.8,233.3 L442.5,233.5 L444.2,233.7 L446.0,233.9 L447.7,234.1 L449.4,234.2 L451.1,234.4 L452.8,234.5 L454.6,234.6 L456.3,234.7 L458.0,234.8 L459.7,234.9 L461.4,235.0 L463.1,235.1 L464.9,235.2 L466.6,235.2 L468.3,235.3 L470.0,235.4" fill="none" class="s-warm" stroke-width="2.5" opacity="0.95"/>
+<path d="M58.0,235.5 L59.7,235.4 L61.4,235.4 L63.1,235.3 L64.9,235.2 L66.6,235.2 L68.3,235.1 L70.0,235.0 L71.7,234.9 L73.5,234.8 L75.2,234.7 L76.9,234.6 L78.6,234.5 L80.3,234.3 L82.0,234.2 L83.8,234.0 L85.5,233.8 L87.2,233.7 L88.9,233.5 L90.6,233.3 L92.3,233.0 L94.0,232.8 L95.8,232.6 L97.5,232.3 L99.2,232.0 L100.9,231.7 L102.6,231.4 L104.3,231.0 L106.1,230.6 L107.8,230.2 L109.5,229.8 L111.2,229.4 L112.9,228.9 L114.7,228.4 L116.4,227.9 L118.1,227.3 L119.8,226.7 L121.5,226.1 L123.2,225.4 L125.0,224.8 L126.7,224.0 L128.4,223.3 L130.1,222.5 L131.8,221.6 L133.5,220.7 L135.2,219.8 L137.0,218.8 L138.7,217.8 L140.4,216.8 L142.1,215.7 L143.8,214.5 L145.6,213.3 L147.3,212.1 L149.0,210.8 L150.7,209.4 L152.4,208.0 L154.1,206.6 L155.8,205.1 L157.6,203.5 L159.3,201.9 L161.0,200.3 L162.7,198.6 L164.4,196.8 L166.2,195.0 L167.9,193.2 L169.6,191.3 L171.3,189.3 L173.0,187.3 L174.7,185.3 L176.4,183.2 L178.2,181.1 L179.9,178.9 L181.6,176.7 L183.3,174.4 L185.0,172.1 L186.8,169.8 L188.5,167.4 L190.2,165.0 L191.9,162.6 L193.6,160.2 L195.3,157.7 L197.1,155.2 L198.8,152.7 L200.5,150.2 L202.2,147.7 L203.9,145.2 L205.6,142.6 L207.3,140.1 L209.1,137.6 L210.8,135.1 L212.5,132.6 L214.2,130.2 L215.9,127.7 L217.7,125.3 L219.4,123.0 L221.1,120.6 L222.8,118.3 L224.5,116.1 L226.2,113.9 L227.9,111.7 L229.7,109.7 L231.4,107.6 L233.1,105.7 L234.8,103.8 L236.5,102.0 L238.2,100.3 L240.0,98.6 L241.7,97.1 L243.4,95.6 L245.1,94.3 L246.8,93.0 L248.6,91.8 L250.3,90.7 L252.0,89.8 L253.7,88.9 L255.4,88.2 L257.1,87.5 L258.9,87.0 L260.6,86.6 L262.3,86.3 L264.0,86.1 L265.7,86.0 L267.4,86.0 L269.1,86.2 L270.9,86.5 L272.6,86.9 L274.3,87.4 L276.0,88.0 L277.7,88.7 L279.4,89.5 L281.2,90.4 L282.9,91.5 L284.6,92.6 L286.3,93.9 L288.0,95.2 L289.8,96.7 L291.5,98.2 L293.2,99.8 L294.9,101.5 L296.6,103.3 L298.3,105.1 L300.1,107.1 L301.8,109.1 L303.5,111.1 L305.2,113.3 L306.9,115.4 L308.6,117.7 L310.4,120.0 L312.1,122.3 L313.8,124.6 L315.5,127.0 L317.2,129.5 L318.9,131.9 L320.6,134.4 L322.4,136.9 L324.1,139.4 L325.8,141.9 L327.5,144.4 L329.2,147.0 L330.9,149.5 L332.7,152.0 L334.4,154.5 L336.1,157.0 L337.8,159.4 L339.5,161.9 L341.2,164.3 L343.0,166.7 L344.7,169.1 L346.4,171.4 L348.1,173.7 L349.8,176.0 L351.6,178.2 L353.3,180.4 L355.0,182.6 L356.7,184.7 L358.4,186.7 L360.1,188.8 L361.9,190.7 L363.6,192.6 L365.3,194.5 L367.0,196.3 L368.7,198.1 L370.4,199.8 L372.1,201.5 L373.9,203.1 L375.6,204.6 L377.3,206.2 L379.0,207.6 L380.7,209.0 L382.4,210.4 L384.2,211.7 L385.9,213.0 L387.6,214.2 L389.3,215.3 L391.0,216.5 L392.8,217.5 L394.5,218.5 L396.2,219.5 L397.9,220.5 L399.6,221.4 L401.3,222.2 L403.1,223.0 L404.8,223.8 L406.5,224.5 L408.2,225.2 L409.9,225.9 L411.6,226.5 L413.4,227.1 L415.1,227.7 L416.8,228.3 L418.5,228.8 L420.2,229.2 L421.9,229.7 L423.6,230.1 L425.4,230.5 L427.1,230.9 L428.8,231.3 L430.5,231.6 L432.2,231.9 L433.9,232.2 L435.7,232.5 L437.4,232.7 L439.1,233.0 L440.8,233.2 L442.5,233.4 L444.2,233.6 L446.0,233.8 L447.7,234.0 L449.4,234.1 L451.1,234.3 L452.8,234.4 L454.6,234.5 L456.3,234.7 L458.0,234.8 L459.7,234.9 L461.4,235.0 L463.1,235.1 L464.9,235.1 L466.6,235.2 L468.3,235.3 L470.0,235.3" fill="none" class="s-acc" stroke-width="2.5" stroke-dasharray="5 4"/>
+<line x1="58.0" y1="236.0" x2="470.0" y2="236.0" class="s-soft" stroke-width="1.5"/>
+<text x="134" y="252" text-anchor="middle" class="xs soft mono">−60</text>
+<text x="264" y="252" text-anchor="middle" class="xs soft mono">0</text>
+<text x="394" y="252" text-anchor="middle" class="xs soft mono">+60</text>
+<text x="264" y="270" text-anchor="middle" class="xs muted">Discounted return Y</text>
+<line x1="264.0" y1="236.0" x2="264.0" y2="80.0" class="s-soft" stroke-width="1" stroke-dasharray="3 3"/>
+<path d="M202.0 172 L326.0 172" class="s-soft" stroke-width="1.25" marker-start="url(#ah)" marker-end="url(#ah)"/>
+<text x="264" y="165" text-anchor="middle" class="xs b muted mono">± σ<tspan baseline-shift="sub" font-size="0.72em">Y</tspan> = 28.57</text>
+<rect x="258.0" y="78.0" width="14" height="158.0" rx="3" fill="none" class="s-ink" stroke-width="1" stroke-dasharray="3 3" opacity="0.55"/>
+<path d="M273.0 82.0 C 520 60, 530 74, 548 84" fill="none" class="s-soft" stroke-width="1.25"/>
+<rect x="500" y="92" width="204" height="146" rx="8" class="panel"/>
+<text x="514" y="112" class="xs b muted">Detail, ×60</text>
+<line x1="570.5" y1="134" x2="570.5" y2="196" class="s-warm" stroke-width="2.5"/>
+<line x1="629.5" y1="134" x2="629.5" y2="196" class="s-acc" stroke-width="2.5" stroke-dasharray="5 4"/>
+<path d="M570.5 208 L629.5 208" class="s-ink" stroke-width="1.25" marker-start="url(#ah)" marker-end="url(#ah)"/>
+<text x="600" y="228" text-anchor="middle" class="xs b ink mono">0.4533</text>
+<text x="565" y="130" text-anchor="end" class="xs b warm">Luck</text>
+<text x="635" y="130" class="xs b acc">Skill</text>
+<line x1="58" y1="284" x2="704" y2="284" class="s-soft" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="58" y="300" class="xs muted mono">E[Y | skill] = 0.9066</text>
+<text x="230" y="300" class="xs muted mono">σ<tspan baseline-shift="sub" font-size="0.72em">Y</tspan> = 28.57</text>
+<text x="360" y="300" class="xs muted mono">E[Y | skill] / σ<tspan baseline-shift="sub" font-size="0.72em">Y</tspan> = 0.0317</text>
+</svg>
+<figcaption><b>Figure 2.</b> Return distributions of the two branches at σ = 3, drawn to scale, with the 0.4533 separation shown at ×60.</figcaption>
+</figure>
+<h2 id="what-exactly-should-the-credit-measure">What exactly should the credit measure?</h2>
+<p>Before writing the estimator, I wanted to be clear about what the attribution was supposed to represent. SkillLuck is useful here because the failure mode of ordinary temporal credit assignment is easy to construct explicitly.</p>
+<p>Under the discounted return, the final action on the <em>Luck</em> branch is credited with essentially the whole reward — it happened immediately before the payout — despite having no effect on it whatsoever. Meanwhile the branch choice at $t = 1$, which determined everything, is credited at $\gamma^{98}$. The method is not making a small error in magnitude; it is crediting the wrong action. As the paper puts it, we credit studying hard for a good grade, not turning the paper over to look at it.</p>
+<p>The paper states four criteria that a credit assignment function should satisfy instead:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+  <th></th>
+  <th>Criterion</th>
+  <th>Requirement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>D1</td>
+  <td>Causal Admissibility</td>
+  <td>Actions that are not causes receive zero credit</td>
+</tr>
+<tr>
+  <td>D2</td>
+  <td>Causal Power</td>
+  <td>Actions that cause the reward receive non-zero credit</td>
+</tr>
+<tr>
+  <td>D3</td>
+  <td>Causal Normality</td>
+  <td>Acting against a more probable baseline earns more credit</td>
+</tr>
+<tr>
+  <td>D4</td>
+  <td>Causal Effect Scaling</td>
+  <td>Larger causal effect earns proportionally more credit</td>
+</tr>
+</tbody>
+</table></div>
+<p>D1 and D2 together make the assignment necessary and sufficient — credit goes to an action <em>if and only if</em> it caused the outcome. D3 and D4 constrain the magnitude. Translated to SkillLuck, D1 says $\phi_{99} = 0$ on the Luck branch and D4 says $\phi_1$ should be larger on Skill than on Luck. These are the two predictions I later tested directly, and they are what the paper's Figure 1 uses to separate its method from eight prior ones — none of which passes both.</p>
+<p>The desiderata, the natural total effect, and counterfactual Shapley values are not introduced by this paper. They come from Lee, Plečko and Bareinboim's framework for causal explanation [2], which develops them for attributing a model's prediction to its input variables. <em>Counterfactual Shapley Credit Assignment</em> carries that machinery into reinforcement learning by taking the players to be the actions of a trajectory and the outcome to be the discounted return. One detail to note when reading both: the numbering of the last two desiderata is swapped. The framework paper lists D3 as effect scaling and D4 as normality; the RL paper uses the reverse, which is the order given above.</p>
+<h3 id="counterfactual-in-the-causal-sense">Counterfactual, in the causal sense</h3>
+<p>Getting D1 requires knowing what an action <em>caused</em>, which requires a counterfactual. A terminological point matters here, because &quot;counterfactual&quot; already appears in this literature meaning something else.</p>
+<p>The paper works inside a structural causal model $\mathcal{M} = \langle \mathbf{V}, \mathbf{U}, \mathcal{F}, P(\mathbf{U}) \rangle$ — endogenous variables, exogenous noise, and structural equations $V_i = f_i(\mathrm{Pa}_i, U_i)$. An MDP becomes an SCM by writing $S_{t+1} = f_S(S_t, X_t, U_{S_{t+1}})$, $X_t = \pi(S_t, U_{X_t})$, $Y_t = r(S_t, X_t, U_{Y_t})$. The counterfactual $V_x(u)$ is the value $V$ takes when $X$ is set to $x$ <em>while the exogenous draw $u$ is held at its observed value</em>.</p>
+<p>The distinction matters because several earlier credit-assignment methods use “counterfactual” in a different sense. They condition on the observed outcome and ask which actions are more likely given that outcome. That is a statement about a conditional distribution; it is not the same as intervening on an action and constructing the resulting world. On SkillLuck, the distinction is particularly clear: an observed reward does not tell us whether it came from the agent's final action or from the Bernoulli variable on the luck branch. A counterfactual rollout can hold the Bernoulli draw fixed and change the action, which directly tests whether the action mattered.</p>
+<p>In implementation terms, this means the counterfactual is generated by <em>replaying the episode</em> with the same noise realization and different actions — which is also what makes the variance reduction of Proposition 3.10 available, since the shared noise cancels in the difference.</p>
+<h3 id="the-coalition-value">The coalition value</h3>
+<p>Shapley values need a cooperative game: players, and a value function on subsets of them. The players are the actions $X_1, \dots, X_T$. The value of a coalition is the <strong>counterfactual natural total effect</strong>:</p>
+<p>$$f(\mathbf{Z}) = \mathrm{NTE}(\mathbf{Z}, Y \mid \tau) = \mathbb{E}\big[\, Y(u) - Y_{\mathbf{Z}(u')}(u) \,\big]$$</p>
+<p>Read as: <em>how much worse would the return have been had the actions in $\mathbf{Z}$ been replaced by baseline alternatives, in this specific episode?</em> &quot;Natural&quot; indicates the exogenous variables come from the posterior $P(\mathbf{U} \mid \tau)$ rather than the prior — the counterfactual world is required to be consistent with what was actually observed.</p>
+<p>Conditioning on the observed trajectory collapses this to the form I implemented:</p>
+<p>$$f(z) = Y - Y^{\sigma_z}$$</p>
+<p>the observed return minus the counterfactual return under intervention $\sigma_z$, for a binary coalition mask $z \in \{0,1\}^T$.</p>
+<h2 id="building-the-counterfactual-rollout">Building the counterfactual rollout</h2>
+<p>The paper specifies $\sigma_z$ in its Equation 7, and it has three cases:</p>
+<p>$$\sigma_z(t) = \begin{cases} x_t & z_t = 0,\ s^z_t = s_t \\ x \sim \pi(\cdot \mid s^z_t) & z_t = 0,\ s^z_t \ne s_t \\ x \sim \pi_{\text{base}}(\cdot \mid s^z_t) & z_t = 1 \end{cases}$$</p>
+<p>which in code is almost a transcription:</p>
+<pre><code class="language-python">if z[t] == 1:
+    action = baseline_policy(state)
+elif state == factual_state[t]:
+    action = factual_action[t]
+else:
+    action = current_policy(state)
+</code></pre>
+<p>The third case is the one worth pausing on. Once an intervention pushes the trajectory off its original path, the factual actions can no longer be replayed — they were conditioned on states that no longer obtain. From that point the current policy has to act. The first case, reusing the observed action when the counterfactual state matches, is licensed by the paper's Assumption 3.3 (exogenous noise independent across steps), and the paper notes this constrains only the SCM representation, not the MDP, since any MDP admits such a representation.</p>
+<p>The choice of $\pi_{\text{base}}$ determines which question is being asked. A uniform baseline measures contribution relative to random behaviour; a fixed reference policy measures improvement over it; the <strong>self-baseline</strong> $\pi_{\text{base}} = \pi$ asks whether the specific action taken mattered relative to what this same policy usually does. The paper uses the self-baseline throughout training, so I did too — a choice with a consequence at convergence that I return to much later.</p>
+<figure class="diagram">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 428" class="fig" role="img" aria-label="Counterfactual simulation under a coalition mask. Actions in the coalition are resampled from the baseline policy; actions outside it are reused while the counterfactual state matches the factual state, and resampled from the current policy otherwise. Both trajectories use the same exogenous variables.">
+<style>
+  .fig { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .fig text { fill: #1a2231; }
+  .ink { fill: #1a2231; } .muted { fill: #4b5566; } .soft { fill: #94a3b8; }
+  .acc { fill: #2563eb; } .warm { fill: #b45309; } .bad { fill: #b91c1c; }
+  .s-ink { stroke: #1a2231; } .s-soft { stroke: #cbd2dc; }
+  .s-acc { stroke: #2563eb; } .s-warm { stroke: #d97706; } .s-bad { stroke: #b91c1c; }
+  .node { fill: #ffffff; stroke: #cbd2dc; stroke-width: 1.5; }
+  .panel { fill: #f7f8fa; stroke: #e8eaee; stroke-width: 1; }
+  .ttl { font-size: 12.5px; font-weight: 600; }
+  .lbl { font-size: 12px; } .sm { font-size: 11.5px; } .xs { font-size: 10.5px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .b { font-weight: 600; }
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+<text x="20" y="26" class="ttl ink">Counterfactual simulation under coalition mask z</text>
+<text x="20" y="44" class="xs muted">T = 8 shown. Intervention rule of Eq. 7.</text>
+<text x="94" y="118" text-anchor="end" class="xs b muted">Factual</text>
+<text x="94" y="131" text-anchor="end" class="xs b muted">trajectory</text>
+<text x="94" y="205" text-anchor="end" class="xs b muted">Counterfactual</text>
+<text x="94" y="218" text-anchor="end" class="xs b muted">trajectory</text>
+<text x="94" y="238" text-anchor="end" class="xs soft">State</text>
+<text x="94" y="268" text-anchor="end" class="xs b muted mono">z</text>
+<rect x="99.0" y="96" width="50" height="34" rx="6" class="panel"/>
+<text x="124" y="118" text-anchor="middle" class="sm ink mono">x₁</text>
+<line x1="124" y1="130" x2="124" y2="184" class="s-soft" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="99.0" y="190" width="50" height="34" rx="6" class="panel"/>
+<text x="124" y="212" text-anchor="middle" class="sm muted mono">x₁</text>
+<rect x="112" y="252" width="24" height="22" rx="5" class="panel" style="stroke:#cbd2dc"/>
+<text x="124" y="268" text-anchor="middle" class="xs b mono" style="fill:#94a3b8">0</text>
+<rect x="99.0" y="233" width="50" height="6" rx="3" style="fill:#cbd2dc" opacity="0.9"/>
+<rect x="173.0" y="96" width="50" height="34" rx="6" class="panel"/>
+<text x="198" y="118" text-anchor="middle" class="sm ink mono">x₂</text>
+<rect x="173.0" y="190" width="50" height="34" rx="6" class="panel" style="stroke:#d97706;stroke-width:2"/>
+<text x="198" y="212" text-anchor="middle" class="sm b warm mono">x′₂</text>
+<path d="M198 168 L198 184" class="s-warm" stroke-width="2" marker-end="url(#ah)"/>
+<text x="198" y="162" text-anchor="middle" class="xs b warm mono">π<tspan baseline-shift="sub" font-size="0.72em">base</tspan></text>
+<rect x="186" y="252" width="24" height="22" rx="5" class="panel" style="stroke:#d97706"/>
+<text x="198" y="268" text-anchor="middle" class="xs b mono" style="fill:#b45309">1</text>
+<rect x="173.0" y="233" width="50" height="6" rx="3" style="fill:#cbd2dc" opacity="0.9"/>
+<rect x="247.0" y="96" width="50" height="34" rx="6" class="panel"/>
+<text x="272" y="118" text-anchor="middle" class="sm ink mono">x₃</text>
+<rect x="247.0" y="190" width="50" height="34" rx="6" class="panel" style="stroke:#2563eb;stroke-width:2;stroke-dasharray:4 3"/>
+<text x="272" y="212" text-anchor="middle" class="sm b acc mono">x̃₃</text>
+<rect x="260" y="252" width="24" height="22" rx="5" class="panel" style="stroke:#cbd2dc"/>
+<text x="272" y="268" text-anchor="middle" class="xs b mono" style="fill:#94a3b8">0</text>
+<rect x="247.0" y="233" width="50" height="6" rx="3" style="fill:#2563eb" opacity="0.75"/>
+<rect x="321.0" y="96" width="50" height="34" rx="6" class="panel"/>
+<text x="346" y="118" text-anchor="middle" class="sm ink mono">x₄</text>
+<rect x="321.0" y="190" width="50" height="34" rx="6" class="panel" style="stroke:#2563eb;stroke-width:2;stroke-dasharray:4 3"/>
+<text x="346" y="212" text-anchor="middle" class="sm b acc mono">x̃₄</text>
+<rect x="334" y="252" width="24" height="22" rx="5" class="panel" style="stroke:#cbd2dc"/>
+<text x="346" y="268" text-anchor="middle" class="xs b mono" style="fill:#94a3b8">0</text>
+<rect x="321.0" y="233" width="50" height="6" rx="3" style="fill:#2563eb" opacity="0.75"/>
+<rect x="395.0" y="96" width="50" height="34" rx="6" class="panel"/>
+<text x="420" y="118" text-anchor="middle" class="sm ink mono">x₅</text>
+<rect x="395.0" y="190" width="50" height="34" rx="6" class="panel" style="stroke:#d97706;stroke-width:2"/>
+<text x="420" y="212" text-anchor="middle" class="sm b warm mono">x′₅</text>
+<path d="M420 168 L420 184" class="s-warm" stroke-width="2" marker-end="url(#ah)"/>
+<text x="420" y="162" text-anchor="middle" class="xs b warm mono">π<tspan baseline-shift="sub" font-size="0.72em">base</tspan></text>
+<rect x="408" y="252" width="24" height="22" rx="5" class="panel" style="stroke:#d97706"/>
+<text x="420" y="268" text-anchor="middle" class="xs b mono" style="fill:#b45309">1</text>
+<rect x="395.0" y="233" width="50" height="6" rx="3" style="fill:#2563eb" opacity="0.75"/>
+<rect x="469.0" y="96" width="50" height="34" rx="6" class="panel"/>
+<text x="494" y="118" text-anchor="middle" class="sm ink mono">x₆</text>
+<line x1="494" y1="130" x2="494" y2="184" class="s-soft" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="469.0" y="190" width="50" height="34" rx="6" class="panel"/>
+<text x="494" y="212" text-anchor="middle" class="sm muted mono">x₆</text>
+<rect x="482" y="252" width="24" height="22" rx="5" class="panel" style="stroke:#cbd2dc"/>
+<text x="494" y="268" text-anchor="middle" class="xs b mono" style="fill:#94a3b8">0</text>
+<rect x="469.0" y="233" width="50" height="6" rx="3" style="fill:#cbd2dc" opacity="0.9"/>
+<rect x="543.0" y="96" width="50" height="34" rx="6" class="panel"/>
+<text x="568" y="118" text-anchor="middle" class="sm ink mono">x₇</text>
+<line x1="568" y1="130" x2="568" y2="184" class="s-soft" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="543.0" y="190" width="50" height="34" rx="6" class="panel"/>
+<text x="568" y="212" text-anchor="middle" class="sm muted mono">x₇</text>
+<rect x="556" y="252" width="24" height="22" rx="5" class="panel" style="stroke:#cbd2dc"/>
+<text x="568" y="268" text-anchor="middle" class="xs b mono" style="fill:#94a3b8">0</text>
+<rect x="543.0" y="233" width="50" height="6" rx="3" style="fill:#cbd2dc" opacity="0.9"/>
+<rect x="617.0" y="96" width="50" height="34" rx="6" class="panel"/>
+<text x="642" y="118" text-anchor="middle" class="sm ink mono">x₈</text>
+<line x1="642" y1="130" x2="642" y2="184" class="s-soft" stroke-width="1.5" marker-end="url(#ah)"/>
+<rect x="617.0" y="190" width="50" height="34" rx="6" class="panel"/>
+<text x="642" y="212" text-anchor="middle" class="sm muted mono">x₈</text>
+<rect x="630" y="252" width="24" height="22" rx="5" class="panel" style="stroke:#cbd2dc"/>
+<text x="642" y="268" text-anchor="middle" class="xs b mono" style="fill:#94a3b8">0</text>
+<rect x="617.0" y="233" width="50" height="6" rx="3" style="fill:#cbd2dc" opacity="0.9"/>
+<path d="M247.0 318 L247.0 310 L445.0 310 L445.0 318" fill="none" class="s-acc" stroke-width="1.25" opacity="0.6"/>
+<text x="346.0" y="334" text-anchor="middle" class="xs b acc mono">s<tspan baseline-shift="sub" font-size="0.72em">t</tspan><tspan baseline-shift="super" font-size="0.72em">z</tspan> ≠ s<tspan baseline-shift="sub" font-size="0.72em">t</tspan></text>
+<text x="568" y="334" text-anchor="middle" class="xs soft mono">s<tspan baseline-shift="sub" font-size="0.72em">t</tspan><tspan baseline-shift="super" font-size="0.72em">z</tspan> = s<tspan baseline-shift="sub" font-size="0.72em">t</tspan></text>
+<rect x="20" y="350" width="684" height="26" rx="6" class="panel" style="stroke:#94a3b8;stroke-dasharray:4 3"/>
+<text x="34" y="367" class="xs muted">Shared exogenous variables</text>
+<text x="196" y="367" class="xs b ink mono">U<tspan baseline-shift="sub" font-size="0.72em">luck</tspan>,  U<tspan baseline-shift="sub" font-size="0.72em">noise</tspan></text>
+<text x="330" y="367" class="xs muted">— identical in both trajectories</text>
+<rect x="20" y="386" width="684" height="30" rx="6" class="panel"/>
+<rect x="34" y="395" width="15" height="12" rx="3" class="panel" style="stroke:#d97706;stroke-width:2"/>
+<text x="56" y="405" class="xs muted mono">z<tspan baseline-shift="sub" font-size="0.72em">t</tspan> = 1:  x ~ π<tspan baseline-shift="sub" font-size="0.72em">base</tspan></text>
+<rect x="212" y="395" width="15" height="12" rx="3" class="panel"/>
+<text x="234" y="405" class="xs muted mono">z<tspan baseline-shift="sub" font-size="0.72em">t</tspan> = 0, s<tspan baseline-shift="sub" font-size="0.72em">t</tspan><tspan baseline-shift="super" font-size="0.72em">z</tspan> = s<tspan baseline-shift="sub" font-size="0.72em">t</tspan>:  reuse x<tspan baseline-shift="sub" font-size="0.72em">t</tspan></text>
+<rect x="446" y="395" width="15" height="12" rx="3" class="panel" style="stroke:#2563eb;stroke-width:2;stroke-dasharray:4 3"/>
+<text x="468" y="405" class="xs muted mono">z<tspan baseline-shift="sub" font-size="0.72em">t</tspan> = 0, s<tspan baseline-shift="sub" font-size="0.72em">t</tspan><tspan baseline-shift="super" font-size="0.72em">z</tspan> ≠ s<tspan baseline-shift="sub" font-size="0.72em">t</tspan>:  x ~ π</text>
+</svg>
+<figcaption><b>Figure 3.</b> The intervention rule of Equation 7 over eight timesteps. Both trajectories consume the same exogenous variables.</figcaption>
+</figure>
+<h3 id="common-random-numbers-are-not-an-optimization">Common random numbers are not an optimization</h3>
+<p>The single most important implementation detail in this function is that both rollouts consume the <strong>same exogenous variables</strong> — in my case the same <code>U_luck</code> and <code>U_noise</code> arrays.</p>
+<p>If the counterfactual draws fresh noise, then $Y - Y^z$ contains the causal effect of the action change <em>plus</em> a fresh draw of environmental randomness. At an SNR of 0.03, the second term does not merely add variance; it is thirty times larger than the quantity being measured. Common random numbers are what make $f(z)$ estimable at all here, and this is Proposition 3.10 made concrete: the variance reduction is proportional to $1 - \rho_Y$, where $\rho_Y$ is the correlation between factual and counterfactual returns under shared randomness. In SkillLuck, where the noise is shared and most coalitions leave the trajectory on-track, $\rho_Y$ is close to 1.</p>
+<h2 id="from-counterfactual-effects-to-shapley-credit">From counterfactual effects to Shapley credit</h2>
+<p>At this point I could evaluate $f(z)$ for any subset. What I needed was $T$ per-timestep numbers, which is what the Shapley value provides — the unique allocation satisfying efficiency, symmetry, and the null-player axiom:</p>
+<p>$$\phi_t = \sum_{Z \subseteq \mathbf{X} \setminus \{X_t\}} \frac{|Z|!\,(T - |Z| - 1)!}{T!}\big[f(Z \cup \{X_t\}) - f(Z)\big]$$</p>
+<p>The null-player axiom is not incidental machinery here — it <em>is</em> D1. An action with no causal effect on the outcome is a null player and receives exactly zero, by construction rather than by estimation. That is the formal reason to expect $\phi_{99} = 0$ on the Luck branch, and it is why an estimator that fails to deliver zero there is not merely imprecise but broken in a specific, diagnosable way. I leaned on this later.</p>
+<p>Written as a sum over $T!$ permutations, this is computationally useless. Sampling permutations and averaging marginal contributions works as a reference implementation at small $T$ and I built one, but the cost is prohibitive: each $\phi_t$ needs its own samples, giving $O(T^2 M)$.</p>
+<p>The kernel formulation is what makes the method tractable, and it is the paper's central efficiency claim:</p>
+<p>$$\phi_t = \sum_{z \in \{0,1\}^T} \kappa_t(z)\, f(z), \qquad \kappa_t(z) = \begin{cases} \dfrac{1}{T\binom{T-1}{|z|-1}} & z_t = 1 \\[2ex] -\dfrac{1}{T\binom{T-1}{|z|}} & z_t = 0 \end{cases}$$</p>
+<p>The sum is now over $2^T$ coalitions rather than $T!$ permutations, which sounds like no improvement — but the structure has changed in a way that matters. <em>A single coalition evaluation contributes to all $T$ attributions at once</em>, through different weights $\kappa_t(z)$. One counterfactual rollout, $T$ updated estimates. The cost drops to $O(TM)$, amortized $O(1)$ per action, and this is what makes $M = 1$ coalition sample per trajectory a viable training configuration.</p>
+<h3 id="choosing-the-proposal-distribution">Choosing the proposal distribution</h3>
+<p>$2^{100}$ coalitions cannot be enumerated, so they are sampled, and the estimator is</p>
+<p>$$\hat\phi_t = \frac{1}{M}\sum_{m=1}^{M} \frac{\kappa_t(z^{(m)})}{Q(z^{(m)})} f(z^{(m)})$$</p>
+<p>The interesting question is what $Q$ should be, and the answer is emphatically not uniform. The kernel weights $|\kappa_t|$ are largest at extreme coalition sizes — $k \approx 1$ or $k \approx T-1$ — and those sizes have probability $O(2^{-T})$ under uniform sampling. Uniform coalition sampling gives variance exponential in $T$.</p>
+<p>The paper's Theorem 4.2 derives the variance-minimizing proposal. It factors into a distribution over coalition <em>sizes</em>, then a uniform choice among masks of that size:</p>
+<p>$$c_k = \frac{1}{T}\left(\frac{1}{k} + \frac{1}{T-k}\right) \ \ (1 \le k < T), \qquad c_T = \frac{1}{T^2}, \qquad q^*_k \propto \sqrt{c_k}, \qquad Q^*(z) = \frac{q^*_k}{\binom{T}{k}}$$</p>
+<p>This concentrates samples where the kernel weights are large and achieves an $O(1)$ second moment. The empty coalition is never sampled, since $f(\emptyset) = 0$ deterministically.</p>
+<figure class="diagram">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 340" class="fig" role="img" aria-label="Probability of drawing a coalition of each size under the optimal proposal Q star and under uniform sampling over coalitions, at T = 20, on a logarithmic scale. Q star places mass at the extreme sizes where the kernel weights are largest.">
+<style>
+  .fig { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .fig text { fill: #1a2231; }
+  .ink { fill: #1a2231; } .muted { fill: #4b5566; } .soft { fill: #94a3b8; }
+  .acc { fill: #2563eb; } .warm { fill: #b45309; } .bad { fill: #b91c1c; }
+  .s-ink { stroke: #1a2231; } .s-soft { stroke: #cbd2dc; }
+  .s-acc { stroke: #2563eb; } .s-warm { stroke: #d97706; } .s-bad { stroke: #b91c1c; }
+  .node { fill: #ffffff; stroke: #cbd2dc; stroke-width: 1.5; }
+  .panel { fill: #f7f8fa; stroke: #e8eaee; stroke-width: 1; }
+  .ttl { font-size: 12.5px; font-weight: 600; }
+  .lbl { font-size: 12px; } .sm { font-size: 11.5px; } .xs { font-size: 10.5px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .b { font-weight: 600; }
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+<text x="20" y="26" class="ttl ink">Coalition size distribution under Q* and uniform sampling</text>
+<text x="20" y="44" class="xs muted">T = 20. |κ<tspan baseline-shift="sub" font-size="0.72em">t</tspan>(z)| is largest at k = 1 and k = T.</text>
+<line x1="84" y1="235.5" x2="690" y2="235.5" class="s-soft" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/><text x="76" y="238.5" text-anchor="end" class="xs soft mono">10⁻⁶</text><line x1="84" y1="208.1" x2="690" y2="208.1" class="s-soft" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/><text x="76" y="211.1" text-anchor="end" class="xs soft mono">10⁻⁵</text><line x1="84" y1="180.7" x2="690" y2="180.7" class="s-soft" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/><text x="76" y="183.7" text-anchor="end" class="xs soft mono">10⁻⁴</text><line x1="84" y1="153.2" x2="690" y2="153.2" class="s-soft" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/><text x="76" y="156.2" text-anchor="end" class="xs soft mono">10⁻³</text><line x1="84" y1="125.8" x2="690" y2="125.8" class="s-soft" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/><text x="76" y="128.8" text-anchor="end" class="xs soft mono">10⁻²</text><line x1="84" y1="98.3" x2="690" y2="98.3" class="s-soft" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/><text x="76" y="101.3" text-anchor="end" class="xs soft mono">10⁻¹</text><rect x="84.0" y="99.5" width="23.3" height="152.5" rx="2" style="fill:#2563eb" opacity="1"/><text x="95.7" y="268" text-anchor="middle" class="xs soft mono">1</text><rect x="114.3" y="103.3" width="23.3" height="148.7" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="144.6" y="105.4" width="23.3" height="146.6" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="174.9" y="106.8" width="23.3" height="145.2" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="205.2" y="107.7" width="23.3" height="144.3" rx="2" style="fill:#2563eb" opacity="0.6"/><text x="216.8" y="268" text-anchor="middle" class="xs soft mono">5</text><rect x="235.5" y="108.4" width="23.3" height="143.6" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="265.8" y="108.9" width="23.3" height="143.1" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="296.1" y="109.2" width="23.3" height="142.8" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="326.4" y="109.4" width="23.3" height="142.6" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="356.7" y="109.4" width="23.3" height="142.6" rx="2" style="fill:#2563eb" opacity="0.6"/><text x="368.3" y="268" text-anchor="middle" class="xs soft mono">10</text><rect x="387.0" y="109.4" width="23.3" height="142.6" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="417.3" y="109.2" width="23.3" height="142.8" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="447.6" y="108.9" width="23.3" height="143.1" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="477.9" y="108.4" width="23.3" height="143.6" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="508.2" y="107.7" width="23.3" height="144.3" rx="2" style="fill:#2563eb" opacity="0.6"/><text x="519.9" y="268" text-anchor="middle" class="xs soft mono">15</text><rect x="538.5" y="106.8" width="23.3" height="145.2" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="568.8" y="105.4" width="23.3" height="146.6" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="599.1" y="103.3" width="23.3" height="148.7" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="629.4" y="99.5" width="23.3" height="152.5" rx="2" style="fill:#2563eb" opacity="0.6"/><rect x="659.7" y="117.7" width="23.3" height="134.3" rx="2" style="fill:#d97706" opacity="1"/><text x="671.4" y="268" text-anchor="middle" class="xs soft mono">20</text><polyline points="95.7,200.4 126.0,173.6 156.2,152.2 186.6,135.0 216.8,121.1 247.2,110.2 277.4,101.9 307.8,96.2 338.0,92.7 368.3,91.6 398.6,92.7 428.9,96.2 459.2,101.9 489.5,110.2 519.9,121.1 550.1,135.0 580.4,152.2 610.8,173.6 641.0,200.4 671.4,236.1" fill="none" style="stroke:#94a3b8" stroke-width="1.5" opacity="0.85"/><circle cx="95.7" cy="200.4" r="2.6" style="fill:#94a3b8"/><circle cx="126.0" cy="173.6" r="2.6" style="fill:#94a3b8"/><circle cx="156.2" cy="152.2" r="2.6" style="fill:#94a3b8"/><circle cx="186.6" cy="135.0" r="2.6" style="fill:#94a3b8"/><circle cx="216.8" cy="121.1" r="2.6" style="fill:#94a3b8"/><circle cx="247.2" cy="110.2" r="2.6" style="fill:#94a3b8"/><circle cx="277.4" cy="101.9" r="2.6" style="fill:#94a3b8"/><circle cx="307.8" cy="96.2" r="2.6" style="fill:#94a3b8"/><circle cx="338.0" cy="92.7" r="2.6" style="fill:#94a3b8"/><circle cx="368.3" cy="91.6" r="2.6" style="fill:#94a3b8"/><circle cx="398.6" cy="92.7" r="2.6" style="fill:#94a3b8"/><circle cx="428.9" cy="96.2" r="2.6" style="fill:#94a3b8"/><circle cx="459.2" cy="101.9" r="2.6" style="fill:#94a3b8"/><circle cx="489.5" cy="110.2" r="2.6" style="fill:#94a3b8"/><circle cx="519.9" cy="121.1" r="2.6" style="fill:#94a3b8"/><circle cx="550.1" cy="135.0" r="2.6" style="fill:#94a3b8"/><circle cx="580.4" cy="152.2" r="2.6" style="fill:#94a3b8"/><circle cx="610.8" cy="173.6" r="2.6" style="fill:#94a3b8"/><circle cx="641.0" cy="200.4" r="2.6" style="fill:#94a3b8"/><circle cx="671.4" cy="236.1" r="2.6" style="fill:#94a3b8"/>
+<path d="M121.7 103.5 L121.7 196.4" class="s-ink" stroke-width="1.1" opacity="0.6" marker-start="url(#ah)" marker-end="url(#ah)"/><text x="129.7" y="154.0" text-anchor="start" class="xs muted mono">Q* / uniform = 4.7 × 10³</text>
+<path d="M645.4 121.7 L645.4 232.1" class="s-ink" stroke-width="1.1" opacity="0.6" marker-start="url(#ah)" marker-end="url(#ah)"/><text x="637.4" y="180.9" text-anchor="end" class="xs muted mono">Q* / uniform = 2.1 × 10⁴</text>
+<line x1="84" y1="252" x2="690" y2="252" class="s-soft" stroke-width="1.5"/>
+<text x="387.0" y="288" text-anchor="middle" class="xs muted">Coalition size k = |z|</text>
+<rect x="20" y="296" width="684" height="34" rx="6" class="panel"/>
+<rect x="34" y="307" width="15" height="12" rx="3" style="fill:#2563eb"/>
+<text x="56" y="317" class="xs muted">Q*, optimal proposal (Theorem 4.2)</text>
+<rect x="256" y="307" width="15" height="12" rx="3" style="fill:#d97706"/>
+<text x="278" y="317" class="xs muted">k = T, the full coalition. Q* assigns zero mass to k = 0.</text>
+<circle cx="606" cy="313" r="3" style="fill:#94a3b8"/>
+<text x="618" y="317" class="xs muted">Uniform over coalitions</text>
+</svg>
+<figcaption><b>Figure 4.</b> Coalition size probabilities under Q* and under uniform sampling, at T = 20, log scale.</figcaption>
+</figure>
+<p>The empty coalition is not sampled because its value is zero. That detail later became relevant to the antithetic estimator.</p>
+<h2 id="the-antithetic-sampling-problem">The antithetic sampling problem</h2>
+<p>On top of common random numbers, the paper applies a second variance reduction: <strong>antithetic sampling</strong>. Each sampled coalition $z$ is paired with its complement $1 - z$, and both are evaluated.</p>
+<p>My first implementation treated the two members of the pair as though both had been sampled from $Q^*$ and weighted them accordingly:</p>
+<pre><code class="language-text">kappa(z)   / Q*(z)
+kappa(1-z) / Q*(1-z)
+</code></pre>
+<p>The problem is that the second coalition was constructed from the first rather than sampled independently. $Q^*$ is a distribution over coalition <em>sizes</em>, and complementation maps size $k$ to size $T - k$. For most $k$ the proposal happens to be symmetric enough that the error is invisible. The exception is the endpoint: $Q^*$ assigns positive probability to the full coalition $k = T$, but never samples the empty coalition $k = 0$. So</p>
+<p>$$Q^*(|z| = T) > 0, \qquad Q^*(|1-z| = 0) = 0$$</p>
+<p>When I sample the full coalition and manufacture its complement, that complement was not drawn from $Q^*$ at all. Weighting it as though it were introduces bias — not noise.</p>
+<p>For SkillLuck this matters because the endpoint is not a negligible part of the estimator. I enumerated all $2^6 = 64$ coalitions at a reduced horizon and measured where the $|\kappa(z) f(z)|$ mass actually sits: <strong>100% of it is at $k = T$</strong>. The antithetic half of every pair was silently discarding the entire signal.</p>
+<figure class="diagram">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 352" class="fig" role="img" aria-label="Antithetic pairing maps a coalition of size k to one of size T minus k. Every complement falls on a size the proposal assigns positive probability, except the complement of the full coalition, which is the empty coalition and has zero mass under Q star. The kernel-weighted coalition values are concentrated entirely at k = T.">
+<style>
+  .fig { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .fig text { fill: #1a2231; }
+  .ink { fill: #1a2231; } .muted { fill: #4b5566; } .soft { fill: #94a3b8; }
+  .acc { fill: #2563eb; } .warm { fill: #b45309; } .bad { fill: #b91c1c; }
+  .s-ink { stroke: #1a2231; } .s-soft { stroke: #cbd2dc; }
+  .s-acc { stroke: #2563eb; } .s-warm { stroke: #d97706; } .s-bad { stroke: #b91c1c; }
+  .node { fill: #ffffff; stroke: #cbd2dc; stroke-width: 1.5; }
+  .panel { fill: #f7f8fa; stroke: #e8eaee; stroke-width: 1; }
+  .ttl { font-size: 12.5px; font-weight: 600; }
+  .lbl { font-size: 12px; } .sm { font-size: 11.5px; } .xs { font-size: 10.5px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .b { font-weight: 600; }
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+<text x="20" y="26" class="ttl ink">Antithetic sampling and the proposal distribution</text>
+<text x="20" y="44" class="xs muted">T = 6. Complementation maps a coalition of size k to one of size T − k.</text>
+<text x="88" y="80" class="xs b muted">Coalition sampled from Q*</text>
+<text x="304.0" y="80" text-anchor="middle" class="xs b muted">Complement coalition</text>
+<text x="78" y="80" text-anchor="end" class="xs soft">Q*</text>
+<rect x="88" y="91" width="62" height="26" rx="5" class="panel" style="stroke:#2563eb;stroke-width:1.5"/><text x="119.0" y="109" text-anchor="middle" class="sm b mono" style="fill:#2563eb">|z| = 1</text><path d="M158 104 L260 104" style="stroke:#cbd2dc" stroke-width="1.25" marker-end="url(#ah)"/><rect x="268" y="91" width="72" height="26" rx="5" class="panel" style="stroke:#cbd2dc;stroke-width:1.5"/><text x="304.0" y="109" text-anchor="middle" class="sm b mono" style="fill:#4b5566">|1−z| = 5</text><text x="350" y="108" class="xs mono" style="fill:#94a3b8">Q* = 0.213</text><text x="78" y="108" text-anchor="end" class="xs soft mono">0.213</text><rect x="88" y="123" width="62" height="26" rx="5" class="panel" style="stroke:#2563eb;stroke-width:1.5"/><text x="119.0" y="141" text-anchor="middle" class="sm b mono" style="fill:#2563eb">|z| = 2</text><path d="M158 136 L260 136" style="stroke:#cbd2dc" stroke-width="1.25" marker-end="url(#ah)"/><rect x="268" y="123" width="72" height="26" rx="5" class="panel" style="stroke:#cbd2dc;stroke-width:1.5"/><text x="304.0" y="141" text-anchor="middle" class="sm b mono" style="fill:#4b5566">|1−z| = 4</text><text x="350" y="140" class="xs mono" style="fill:#94a3b8">Q* = 0.168</text><text x="78" y="140" text-anchor="end" class="xs soft mono">0.168</text><rect x="88" y="155" width="62" height="26" rx="5" class="panel" style="stroke:#2563eb;stroke-width:1.5"/><text x="119.0" y="173" text-anchor="middle" class="sm b mono" style="fill:#2563eb">|z| = 3</text><path d="M158 168 L260 168" style="stroke:#cbd2dc" stroke-width="1.25" marker-end="url(#ah)"/><rect x="268" y="155" width="72" height="26" rx="5" class="panel" style="stroke:#cbd2dc;stroke-width:1.5"/><text x="304.0" y="173" text-anchor="middle" class="sm b mono" style="fill:#4b5566">|1−z| = 3</text><text x="350" y="172" class="xs mono" style="fill:#94a3b8">Q* = 0.159</text><text x="78" y="172" text-anchor="end" class="xs soft mono">0.159</text><rect x="88" y="187" width="62" height="26" rx="5" class="panel" style="stroke:#2563eb;stroke-width:1.5"/><text x="119.0" y="205" text-anchor="middle" class="sm b mono" style="fill:#2563eb">|z| = 4</text><path d="M158 200 L260 200" style="stroke:#cbd2dc" stroke-width="1.25" marker-end="url(#ah)"/><rect x="268" y="187" width="72" height="26" rx="5" class="panel" style="stroke:#cbd2dc;stroke-width:1.5"/><text x="304.0" y="205" text-anchor="middle" class="sm b mono" style="fill:#4b5566">|1−z| = 2</text><text x="350" y="204" class="xs mono" style="fill:#94a3b8">Q* = 0.168</text><text x="78" y="204" text-anchor="end" class="xs soft mono">0.168</text><rect x="88" y="219" width="62" height="26" rx="5" class="panel" style="stroke:#2563eb;stroke-width:1.5"/><text x="119.0" y="237" text-anchor="middle" class="sm b mono" style="fill:#2563eb">|z| = 5</text><path d="M158 232 L260 232" style="stroke:#cbd2dc" stroke-width="1.25" marker-end="url(#ah)"/><rect x="268" y="219" width="72" height="26" rx="5" class="panel" style="stroke:#cbd2dc;stroke-width:1.5"/><text x="304.0" y="237" text-anchor="middle" class="sm b mono" style="fill:#4b5566">|1−z| = 1</text><text x="350" y="236" class="xs mono" style="fill:#94a3b8">Q* = 0.213</text><text x="78" y="236" text-anchor="end" class="xs soft mono">0.213</text><rect x="88" y="251" width="62" height="26" rx="5" class="panel" style="stroke:#b91c1c;stroke-width:2"/><text x="119.0" y="269" text-anchor="middle" class="sm b mono" style="fill:#b91c1c">|z| = 6</text><path d="M158 264 L260 264" style="stroke:#b91c1c" stroke-width="2" marker-end="url(#ah)" stroke-dasharray='4 3'/><rect x="268" y="251" width="72" height="26" rx="5" class="panel" style="stroke:#b91c1c;stroke-width:2;stroke-dasharray:4 3"/><text x="304.0" y="269" text-anchor="middle" class="sm b mono" style="fill:#b91c1c">|1−z| = 0</text><text x="350" y="268" class="xs mono" style="fill:#b91c1c">Q* = 0</text><text x="78" y="268" text-anchor="end" class="xs soft mono">0.079</text>
+<rect x="20" y="300" width="392" height="46" rx="6" class="panel" style="stroke:#b91c1c"/>
+<text x="34" y="319" class="xs b bad mono">Q*(|z| = 6) &gt; 0,   Q*(|1−z| = 0) = 0</text>
+<text x="34" y="337" class="xs muted">The complement is not sampled from Q* when Q* is not complement-symmetric.</text>
+<line x1="430" y1="62" x2="430" y2="288" class="s-soft" stroke-width="1" stroke-dasharray="3 4"/>
+<text x="452" y="82" class="ttl ink">Distribution of |κ<tspan baseline-shift="sub" font-size="0.72em">t</tspan>(z) f(z)|</text>
+<text x="452" y="99" class="xs muted">All 2⁶ = 64 coalitions enumerated.</text>
+<rect x="452" y="244.0" width="30" height="2.0" rx="2" style="fill:#cbd2dc"/><text x="467.0" y="262" text-anchor="middle" class="xs soft mono">1</text><rect x="490" y="244.0" width="30" height="2.0" rx="2" style="fill:#cbd2dc"/><text x="505.0" y="262" text-anchor="middle" class="xs soft mono">2</text><rect x="528" y="244.0" width="30" height="2.0" rx="2" style="fill:#cbd2dc"/><text x="543.0" y="262" text-anchor="middle" class="xs soft mono">3</text><rect x="566" y="244.0" width="30" height="2.0" rx="2" style="fill:#cbd2dc"/><text x="581.0" y="262" text-anchor="middle" class="xs soft mono">4</text><rect x="604" y="244.0" width="30" height="2.0" rx="2" style="fill:#cbd2dc"/><text x="619.0" y="262" text-anchor="middle" class="xs soft mono">5</text><rect x="642" y="110.0" width="30" height="136.0" rx="2" style="fill:#b91c1c"/><text x="657.0" y="262" text-anchor="middle" class="xs soft mono">6</text>
+<line x1="444" y1="246" x2="680" y2="246" class="s-soft" stroke-width="1.5"/>
+<text x="566" y="280" text-anchor="middle" class="xs muted">Coalition size k</text>
+<text x="657.0" y="128" text-anchor="middle" class="xs b mono" style="fill:#ffffff">1.00</text>
+<text x="452" y="316" class="xs muted">Fraction of total |κ<tspan baseline-shift="sub" font-size="0.72em">t</tspan>(z) f(z)| by coalition size,</text>
+<text x="452" y="330" class="xs muted">measured in this environment.</text>
+</svg>
+<figcaption><b>Figure 5.</b> Left: complementation maps size k to size T − k, and every pair lands on a size Q* can draw except the complement of the full coalition. Right: the kernel-weighted coalition values, measured by enumerating all 64 coalitions.</figcaption>
+</figure>
+<p>A second, smaller bug had been hiding the asymmetry from me. My <code>coalition_probability</code> returned <code>q[-1]</code> for the empty coalition through Python's negative indexing, so $k = 0$ silently received $q_T$ instead of zero. Numerically harmless, since $f(\emptyset) = 0$ — but it meant the code never raised the division-by-zero that would have pointed straight at the problem.</p>
+<p>The fix is to recognize which distribution the pair is actually drawn from. Once both members are used, the effective density is the mixture</p>
+<p>$$Q_{\text{mix}}(z) = \tfrac{1}{2}\big[Q^*(z) + Q^*(1-z)\big]$$</p>
+<pre><code class="language-python">def coalition_mixture_probability(z):
+    return 0.5 * (coalition_probability(z) + coalition_probability(1 - z))
+
+def coalition_probability(z):
+    k = int(z.sum())
+    if k == 0:
+        return 0.0
+    return q[k - 1] / math.comb(len(z), k)
+</code></pre>
+<p>The important point is that constructing the complement changes the sampling distribution. The importance weight therefore has to account for both members of the pair.</p>
+<p>One wording distinction matters. This was a bug in <em>my implementation</em>. The paper states that it uses antithetic sampling and cites Covert &amp; Lee, but does not spell out the denominator used for the paired sample. Turning an omission in the exposition into a claim that the paper's estimator is wrong would not be fair, and I have asked the authors to confirm how they handled the weighting.</p>
+<h3 id="the-oracle-that-caught-it">The oracle that caught it</h3>
+<p>At $T = 6$ there are only 64 coalitions, so an exact Shapley oracle is cheap enough that there is no reason not to build one. I enumerated every coalition, estimated its value over 300 rollouts, computed φ directly from the marginal-contribution definition, and independently checked that against the kernel identity.</p>
+<pre><code class="language-text">exact φ                  : [ 0.2462, -0.0030, -0.0033,  0.0028,  0.0004,  0.0010]
+no antithetic            : [ 0.2522,  0.0017,  0.0052,  0.0015,  0.0018,  0.0042]
+antithetic, Q* weighting : [ 0.2289, -0.0209, -0.0206, -0.0215, -0.0239, -0.0141]
+antithetic, Q_mix        : [ 0.2539, -0.0008,  0.0047, -0.0015, -0.0011,  0.0050]
+</code></pre>
+<p>(all at $M = 20{,}000$)</p>
+<p>Two symptoms, both diagnostic. The causal coordinate is shrunk, and every non-causal coordinate converges to a constant $\approx -0.02$ instead of zero. That constant offset is D1 failing — and D1, as established above, is the null-player axiom, which is the property the entire construction rests on. A method whose whole claim is that non-causes get zero was reliably giving them $-0.02$.</p>
+<p>The decisive observation is the third row's stability. The run had already converged in the Monte Carlo sense; increasing $M$ would not have rescued it, because the problem was bias. Note also that the naive non-antithetic estimator was already correct — the variance reduction was the only thing that broke it.</p>
+<p>The small oracle gives a reference value against which the estimator can be tested directly, rather than
+inferred from training behaviour.</p>
+<h2 id="using-as-a-learning-signal">Using φ as a learning signal</h2>
+<p>With a working $\hat\phi$, the question becomes what to do with it. The paper's answer is to treat the attributions as a replacement reward function, leaving the dynamics untouched:</p>
+<p>$$r^\phi_\pi(s, x) = \mathbb{E}_{\tau \sim \pi}[\phi_t \mid S_t = s, X_t = x]$$</p>
+<p>Two results make this legitimate as a drop-in replacement rather than reward shaping with extra steps. Lemma 3.5 (gradient equivalence) shows $\mathbb{E}_\pi[\sum_t \phi_t \nabla \log \pi_t] = \mathbb{E}_\pi[Y \sum_t \nabla \log \pi_t]$ — a policy gradient method receives the same update direction <em>in expectation</em> under either reward. Theorem 3.7 then gives optimal policy equivalence: $\arg\max_\theta \mathbb{E}_{\pi_\theta}[\sum_t \phi_t] = \arg\max_\theta \mathbb{E}_{\pi_\theta}[Y]$.</p>
+<p>This is what makes the construction useful for learning rather than only for explanation. The target objective is unchanged in expectation; the intended benefit is that the per-step learning signal contains more information about which actions mattered. That is the property SkillLuck is designed to test.</p>
+<p>Three consequences of this are implementation constraints, and all three are easy to get wrong.</p>
+<p><strong>The φ-MDP is undiscounted.</strong> $\gamma_\phi = 1$. The outcome $Y = \sum_t \gamma^{t-1} r_t$ from which φ is computed already contains the discounting; applying $\gamma$ again to the φ-rewards would double-discount. By Shapley efficiency, $\sum_t \phi_t = Y - Y^{\mathbf{1}}$. My φ returns and φ-GAE are therefore computed at $\gamma = 1$ while the environment still runs at 0.999.</p>
+<p><strong>Advantages are normalized by standard deviation only, never z-scored.</strong></p>
+<pre><code class="language-python">adv = adv / adv.std().clamp(min=1e-8)
+</code></pre>
+<p>Subtracting the mean would shift $\phi = 0$ away from zero and destroy its meaning as the no-effect reference point — undoing D1 at the last possible moment, after all the work done to obtain it. The PPO baseline uses ordinary mean-centred normalization; the φ arm cannot.</p>
+<p><strong>There is a bias–variance dial I did not turn.</strong> The basic estimator needs a full counterfactual rollout per coalition; the paper's λ-bootstrapping replaces the tail with a learned value function via a TD(λ) return, with bias bounded by $\frac{2\gamma(1-\lambda)}{1-\gamma\lambda}\|V - V_\pi\|_\infty$ (Theorem 4.4). At $\lambda = 1$ the estimator is pure Monte Carlo and unbiased, which is what Table 3 reports for the experiments, so that is what I implemented.</p>
+<p>The remaining component of the full method is <strong>Prioritized Trajectory Replay</strong>, which samples <em>subtrajectories</em> in proportion to causal importance $|\phi|$ — as opposed to PER, which prioritizes individual transitions by TD error. I did not implement it. The paper's Combinatorial Lock ablation finds both components necessary there, and PTR's absence is the largest known structural difference between my setup and the paper's; it comes back in the final comparison.</p>
+<h2 id="validating-the-pieces-against-each-other">Validating the pieces against each other</h2>
+<p>Before trusting any training curve I ran three checks, each designed so that a specific class of error could not pass it.</p>
+<p><strong>The vectorized estimator against the reference implementation.</strong> At $T = 10$, $M = 40{,}000$, the two differed by at most 0.005 in any coordinate — confirming the speedup was an implementation change and not a mathematical one.</p>
+<p><strong>The fast simulator against the environment.</strong> I compared 3,000 episodes from the original environment against the tabulated simulator, with the reward noise turned off:</p>
+<pre><code class="language-text">             mean       std
+slow       +0.4702    0.4530
+fast       +0.4672    0.4531
+</code></pre>
+<p>with $\mathrm{SE(diff)} = 0.0117$ — the observed difference is a quarter of one standard error.</p>
+<p>My first attempt ran this at $\sigma = 3$ and was nearly worthless: with a return noise standard deviation of 28.57, $\mathrm{SE(diff)} \approx 0.74$, so the entire quantity of interest was about one standard error wide. It would have passed with badly broken branch logic. Turning the noise off made the test roughly 60× sharper, which suggests a rule I would now apply by default: <strong>turn the noise off to test correctness, and turn it back on to test the claim.</strong></p>
+<p><strong>The credit profile against the causal structure.</strong> This is the check that directly tests the causal claims behind D1 and D2. Using $M = 300$ samples per trajectory and averaging <em>absolute</em> attributions over branch-matched trajectories:</p>
+<figure class="diagram">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 352" class="fig" role="img" aria-label="Mean absolute phi attribution by branch. On skill trajectories both the branch selection and the final action exceed the non-causal mean. On luck trajectories the branch selection exceeds it while the final action does not.">
+<style>
+  .fig { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .fig text { fill: #1a2231; }
+  .ink { fill: #1a2231; } .muted { fill: #4b5566; } .soft { fill: #94a3b8; }
+  .acc { fill: #2563eb; } .warm { fill: #b45309; } .bad { fill: #b91c1c; }
+  .s-ink { stroke: #1a2231; } .s-soft { stroke: #cbd2dc; }
+  .s-acc { stroke: #2563eb; } .s-warm { stroke: #d97706; } .s-bad { stroke: #b91c1c; }
+  .node { fill: #ffffff; stroke: #cbd2dc; stroke-width: 1.5; }
+  .panel { fill: #f7f8fa; stroke: #e8eaee; stroke-width: 1; }
+  .ttl { font-size: 12.5px; font-weight: 600; }
+  .lbl { font-size: 12px; } .sm { font-size: 11.5px; } .xs { font-size: 10.5px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .b { font-weight: 600; }
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+<text x="20" y="26" class="ttl ink">Mean |φ| by branch and timestep</text>
+<text x="20" y="44" class="xs muted">Branch-matched trajectories, M = 300 coalition samples per trajectory.</text>
+<rect x="96" y="156.7" width="60" height="93.3" rx="3" style="fill:#2563eb"/><text x="126.0" y="148.7" text-anchor="middle" class="xs b mono ink">0.2161</text><text x="126.0" y="268" text-anchor="middle" class="xs b ink">φ₁</text><text x="126.0" y="285" text-anchor="middle" class="xs mono" style="fill:#2563eb">5.2×</text><rect x="172" y="100.2" width="60" height="149.8" rx="3" style="fill:#2563eb"/><text x="202.0" y="92.2" text-anchor="middle" class="xs b mono ink">0.3471</text><text x="202.0" y="268" text-anchor="middle" class="xs b ink">φ₉₉</text><text x="202.0" y="285" text-anchor="middle" class="xs mono" style="fill:#2563eb">8.4×</text><rect x="248" y="232.2" width="60" height="17.8" rx="3" style="fill:#cbd2dc"/><text x="278.0" y="224.2" text-anchor="middle" class="xs b mono ink">0.0413</text><text x="278.0" y="268" text-anchor="middle" class="xs soft">Non-causal</text><text x="278.0" y="285" text-anchor="middle" class="xs mono" style="fill:#94a3b8">1.0×</text><line x1="88" y1="232.2" x2="314" y2="232.2" class="s-soft" stroke-width="1.25" stroke-dasharray="4 3"/><text x="96" y="66" class="ttl" style="fill:#2563eb">Skill branch</text><rect x="400" y="141.5" width="60" height="108.5" rx="3" style="fill:#d97706"/><text x="430.0" y="133.5" text-anchor="middle" class="xs b mono ink">0.2514</text><text x="430.0" y="268" text-anchor="middle" class="xs b ink">φ₁</text><text x="430.0" y="285" text-anchor="middle" class="xs mono" style="fill:#d97706">8.1×</text><rect x="476" y="237.3" width="60" height="12.7" rx="3" style="fill:#d97706"/><text x="506.0" y="229.3" text-anchor="middle" class="xs b mono ink">0.0294</text><text x="506.0" y="268" text-anchor="middle" class="xs b ink">φ₉₉</text><text x="506.0" y="285" text-anchor="middle" class="xs mono" style="fill:#d97706">0.9×</text><rect x="552" y="236.5" width="60" height="13.5" rx="3" style="fill:#cbd2dc"/><text x="582.0" y="228.5" text-anchor="middle" class="xs b mono ink">0.0312</text><text x="582.0" y="268" text-anchor="middle" class="xs soft">Non-causal</text><text x="582.0" y="285" text-anchor="middle" class="xs mono" style="fill:#94a3b8">1.0×</text><line x1="392" y1="236.5" x2="618" y2="236.5" class="s-soft" stroke-width="1.25" stroke-dasharray="4 3"/><text x="400" y="66" class="ttl" style="fill:#d97706">Luck branch</text>
+<line x1="86" y1="250" x2="700" y2="250" class="s-soft" stroke-width="1.5"/>
+<line x1="366" y1="58" x2="366" y2="268" class="s-soft" stroke-width="1" stroke-dasharray="3 4"/>
+<rect x="500" y="92" width="204" height="52" rx="6" class="panel" style="stroke:#d97706"/>
+<text x="512" y="110" class="xs muted">x₉₉ is non-causal on the luck</text>
+<text x="512" y="125" class="xs muted">branch, and receives attribution</text>
+<text x="512" y="140" class="xs muted">within the non-causal range (D1).</text>
+<path d="M534 144 L510 222" class="s-warm" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#ah)"/>
+<text x="20" y="316" class="xs soft mono">φ₁: branch selection.   φ₉₉: final action.   Non-causal: mean over t = 2, …, T−2.</text>
+<text x="20" y="332" class="xs soft">Ratios are relative to the non-causal mean of the same branch.</text>
+</svg>
+<figcaption><b>Figure 6.</b> Mean |φ| by branch, against each branch's own non-causal mean. M = 300 coalition samples per trajectory; nothing in the pipeline identifies the branch.</figcaption>
+</figure>
+<p>Relative to the floor: on Skill, the first action is 5.2× and the final action 8.4×; on Luck, the first action is 8.1× and the final action 0.9× — indistinguishable from the 98 inert timesteps.</p>
+<p>The final-action result on the Luck branch is the clearest test of D1. The estimator is never told which branch it is on, and nothing in the pipeline distinguishes step 98 on Skill from step 98 on Luck except the counterfactual itself: intervening there changes the return on one branch and not the other. The difference comes from the counterfactual intervention itself rather than from a branch-specific rule in the implementation.</p>
+<p>Two methodological notes, because my first version of this diagnostic looked like an outright failure. <strong>φ is signed</strong> — a good factual action gives positive attribution, a harmful one negative, and at a near-random policy these cancel exactly in the mean. And pooling the branches mixes a population where step 98 is causal with one where it is not. Averaging signed φ over pooled trajectories destroys the signal completely, which is precisely what my first printout showed. Absolute values, split by branch.</p>
+<p>A third note: do not use &quot;fraction of total mass on causal steps&quot; as the metric. With 98 inert steps, even a small per-step residual sums to more than two causal steps can, so the fraction is low regardless of how well the method works. Use the per-step ratio against the floor — and note the floor here is residual $M = 300$ estimator variance, not bias, so it shrinks as $M$ grows.</p>
+<h2 id="a-control-for-reward-densification">A control for reward densification</h2>
+<p>There is an obvious skeptical reading of any result from this method: dense rewards help optimization on their own, so perhaps replacing a sparse reward with <em>any</em> per-step signal would do as well. If so, the causal structure of φ is decorative and Theorem 3.7 is doing no work.</p>
+<p>The control is straightforward. I permuted each φ vector before handing it to the policy — identical magnitudes, identical sum, identical variance, temporal alignment destroyed — and separately tested a uniform redistribution of the same total. On five seeds that all converge under the real signal:</p>
+<pre><code class="language-text">real φ      5/5 converge
+shuffled    0/5 converge
+uniform     1/5 converge
+</code></pre>
+<p>This control makes it difficult to explain the result by reward densification alone: the same φ values are
+still present, but moving them to different timesteps removes the learning effect.</p>
+<h2 id="making-the-experiment-practical">Making the experiment practical</h2>
+<p>The direct implementation makes an enormous number of very small neural network calls: per φ-episode, roughly 300 batch-1 forward passes across the factual rollout and two counterfactual rollouts, all inside Python loops.</p>
+<p>The network is a $2 \to 64 \to 64 \to 2$ MLP, so this is not a matrix multiplication problem. Measured:</p>
+<pre><code class="language-text">one 1-sample actor forward :   65.2 µs
+one 512-sample forward     :  388.9 µs
+</code></pre>
+<p>A 512× larger batch costs 6× the time. The cost is essentially all per-call overhead. A GPU does not help — kernel launch latency replaces Python and ATen dispatch latency at roughly the same magnitude, plus a device synchronization per step because the environment is NumPy. A TPU is worse: XLA wants static shapes, and this loop is dynamic and control-flow heavy.</p>
+<p>The fix exploits a property of SkillLuck specifically. The policy only ever observes states of the form $(t, \text{branch})$ with $\text{branch} \in \{\text{none}, \text{skill}, \text{luck}\}$ — only $3(T+1)$ distinct inputs. So I evaluate the actor and critic on the entire grid once per iteration, producing tables of shape <code>(101, 3)</code>, then run the environment and counterfactual simulator directly against those tables in NumPy.</p>
+<p>This is exact, not an approximation: the policy is frozen within an iteration, so the table contains precisely the probabilities that iteration needs.</p>
+<pre><code class="language-text">original φ episode    :  42.27 ms
+tabulated φ episode   :   0.24 ms
+speedup               : 177.7×
+</code></pre>
+<p>Final runtime was 6.2 minutes per seed, putting 50 seeds per arm at about 5.2 hours.</p>
+<p>One implementation detail is worth noting here. The tabulated path duplicates the environment's reward logic, and on my first attempt the branch codes were swapped. It produced entirely plausible returns and completely wrong φ. I now verify any such fast path with a reward reconstruction check against the environment — mine agrees to about $2.4 \times 10^{-7}$.</p>
+<h2 id="matching-the-budget">Matching the budget</h2>
+<p>φ-PPO pays extra simulation cost for its counterfactual credit, so the comparison has to be made on environment steps rather than episodes. With $M = 1$ and an antithetic pair, each training trajectory costs one factual rollout plus two counterfactual rollouts:</p>
+<pre><code class="language-text">PPO    → 100 environment steps per trajectory
+φ-PPO  → 300 environment steps per trajectory
+</code></pre>
+<p>I matched both arms at 3 million environment steps. With a batch of 32 trajectories that gives 937 iterations for PPO and 312 for φ-PPO. Plotting against episodes rather than environment steps would inflate the comparison by 3×.</p>
+<p>This accounting does not quite match the paper's, which is worth flagging. Section 5 states that φ-PPO uses $(1+M)T$ steps per episode, and Appendix E.1 confirms &quot;with $M = 1$, φ-PPO requires $2T$ steps per episode (one counterfactual rollout).&quot; Under my accounting, antithetic pairing at $M = 1$ costs $3T$. Either the SkillLuck runs did not use the antithetic complement, or the complement rollout is not counted in the step budget. It is a factor of 1.5 in any step-matched comparison, so it is not negligible, and it is one of the questions I put to the authors.</p>
+<h3 id="configuration">Configuration</h3>
+<pre><code class="language-text">T            = 100          batch        = 32 trajectories
+gamma        = 0.999        epochs       = 4
+sigma        = 3            M            = 1
+PPO clip     = 0.2          lambda_phi   = 0.95
+actor LR     = 3e-3         entropy      = 0.01, annealed linearly to 0
+critic LR    = 1e-3         grad clip    = 0.5
+</code></pre>
+<p>The convergence criterion follows the paper's: $P(\text{skill}) > 0.9$ <strong>and</strong> $P(\text{final} = 1 \mid \text{skill}) > 0.9$, sustained for 200 consecutive episodes. Operationally the notebook checks this over batched checkpoints, so at batch 32 the 200-episode window becomes a six-iteration window — 192 sampled episodes.</p>
+<h2 id="the-50-seed-comparison">The 50-seed comparison</h2>
+<p>Seeds 0–49 for both arms, checkpointed per seed so that a Kaggle runtime failure would not destroy completed work.</p>
+<pre><code class="language-text">converged : φ-PPO 28/50    PPO 13/50
+</code></pre>
+<p>One-sided Fisher exact <em>p</em> = 0.0021 (two-sided 0.0042). The rate difference is 0.300 with a 95% CI of [0.116, 0.484], a relative rate of 2.15×, and the per-arm Wilson intervals — φ-PPO (0.423, 0.688), PPO (0.159, 0.396) — do not overlap.</p>
+<figure class="diagram">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 344" class="fig" role="img" aria-label="Distribution of the final joint optimality probability across 50 seeds per arm, binned below 0.1, between 0.1 and 0.9, and above 0.9. Both arms are bimodal.">
+<style>
+  .fig { font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .fig text { fill: #1a2231; }
+  .ink { fill: #1a2231; } .muted { fill: #4b5566; } .soft { fill: #94a3b8; }
+  .acc { fill: #2563eb; } .warm { fill: #b45309; } .bad { fill: #b91c1c; }
+  .s-ink { stroke: #1a2231; } .s-soft { stroke: #cbd2dc; }
+  .s-acc { stroke: #2563eb; } .s-warm { stroke: #d97706; } .s-bad { stroke: #b91c1c; }
+  .node { fill: #ffffff; stroke: #cbd2dc; stroke-width: 1.5; }
+  .panel { fill: #f7f8fa; stroke: #e8eaee; stroke-width: 1; }
+  .ttl { font-size: 12.5px; font-weight: 600; }
+  .lbl { font-size: 12px; } .sm { font-size: 11.5px; } .xs { font-size: 10.5px; }
+  .mono { font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .b { font-weight: 600; }
+</style>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/></marker></defs>
+
+<text x="20" y="26" class="ttl ink">Distribution of final P(optimal) across seeds</text>
+<text x="20" y="44" class="xs muted mono">P(optimal) = P(skill) × P(final = 1 | skill).   n = 50 seeds per arm.</text>
+<text x="150" y="70" class="ttl acc">φ-PPO</text>
+<text x="400" y="70" class="ttl warm">PPO</text>
+<rect x="150" y="193.4" width="52" height="58.6" rx="3" style="fill:#2563eb"/><text x="176.0" y="185.4" text-anchor="middle" class="sm b mono ink">15</text><text x="176.0" y="269" text-anchor="middle" class="xs soft mono">&lt; 0.1</text><rect x="400" y="95.8" width="52" height="156.2" rx="3" style="fill:#d97706"/><text x="426.0" y="87.8" text-anchor="middle" class="sm b mono ink">40</text><text x="426.0" y="269" text-anchor="middle" class="xs soft mono">&lt; 0.1</text><rect x="220" y="205.1" width="52" height="46.9" rx="3" style="fill:#2563eb"/><text x="246.0" y="197.1" text-anchor="middle" class="sm b mono ink">12</text><text x="246.0" y="269" text-anchor="middle" class="xs soft mono">0.1 – 0.9</text><rect x="470" y="240.3" width="52" height="11.7" rx="3" style="fill:#d97706"/><text x="496.0" y="232.3" text-anchor="middle" class="sm b mono ink">3</text><text x="496.0" y="269" text-anchor="middle" class="xs soft mono">0.1 – 0.9</text><rect x="290" y="162.2" width="52" height="89.8" rx="3" style="fill:#2563eb"/><text x="316.0" y="154.2" text-anchor="middle" class="sm b mono ink">23</text><text x="316.0" y="269" text-anchor="middle" class="xs soft mono">&gt; 0.9</text><rect x="540" y="224.7" width="52" height="27.3" rx="3" style="fill:#d97706"/><text x="566.0" y="216.7" text-anchor="middle" class="sm b mono ink">7</text><text x="566.0" y="269" text-anchor="middle" class="xs soft mono">&gt; 0.9</text>
+<line x1="140" y1="252" x2="700" y2="252" class="s-soft" stroke-width="1.5"/>
+<text x="130" y="256" text-anchor="end" class="xs soft mono">0</text>
+<line x1="140" y1="154.4" x2="700" y2="154.4" class="s-soft" stroke-width="1" stroke-dasharray="2 4" opacity="0.6"/>
+<text x="130" y="158.4" text-anchor="end" class="xs soft mono">25</text>
+<text x="20" y="144" class="xs soft">Seeds</text>
+<rect x="20" y="288" width="684" height="46" rx="6" class="panel"/>
+<text x="34" y="306" class="xs muted mono">φ-PPO: mean 0.58, median 0.90.    PPO: median 0.004.</text>
+<text x="34" y="324" class="xs muted">Convergence criterion met by 28/50 (φ-PPO) and 13/50 (PPO); one-sided Fisher exact p = 0.0021.</text>
+</svg>
+<figcaption><b>Figure 7.</b> Where the 50 seeds per arm finish on the joint optimality probability.</figcaption>
+</figure>
+<figure>
+  <img src="assets/csca/seed-curves.png" alt="Three panels showing P(skill branch), P(final=1 given skill) and P(optimal policy) against environment steps, with the median for each arm drawn over all fifty individual seed traces.">
+  <figcaption><b>Figure 8.</b> All 50 seeds per arm, with medians overlaid. The individual traces show the
+  bimodality directly: seeds settle at the top or the bottom of the range, and the median line passes
+  through a region where few seeds actually sit.</figcaption>
+</figure>
+<p><strong>On why 50 seeds.</strong> An earlier 15-seed run gave 8/15 versus 4/15 at <em>p</em> = 0.132. That was not a negative result; it was an underpowered one. Simulating power at the observed effect size:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+  <th>seeds per arm</th>
+  <th>power</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>15</td>
+  <td>0.30</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td>0.57</td>
+</tr>
+<tr>
+  <td>50</td>
+  <td>0.82</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>0.98</td>
+</tr>
+</tbody>
+</table></div>
+<p>At 15 seeds, a real effect of this size would have been missed 70% of the time. The 15-seed experiment was underpowered to distinguish the two conditions at the observed effect size, so
+I expanded it to 50 seeds.</p>
+<p><strong>On the shape of the distribution.</strong> The outcomes are bimodal, not centred:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+  <th></th>
+  <th>median</th>
+  <th>&gt; 0.9</th>
+  <th>&lt; 0.1</th>
+  <th>intermediate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>φ-PPO</td>
+  <td>0.772</td>
+  <td>23</td>
+  <td>15</td>
+  <td>12</td>
+</tr>
+<tr>
+  <td>PPO</td>
+  <td>0.004</td>
+  <td>7</td>
+  <td>40</td>
+  <td>3</td>
+</tr>
+</tbody>
+</table></div>
+<p>The mean curve ends around 0.58 and the median around 0.9, The mean and median therefore do not represent the behaviour of a typical run. Counts are the more
+informative summary here, and the curves are better read as illustration than as a single final number.</p>
+<p><strong>On transient convergence.</strong> The criterion counts 28 φ-PPO seeds, but only 23 finish above 0.9 on the joint quantity $P(\text{skill}) \times P(\text{final} = 1 \mid \text{skill})$. Some seeds satisfy the 200-episode window and then drift back out.</p>
+<p>This is not a measurement artifact, and it follows directly from the self-baseline choice made back in the counterfactual rollout. Under $\pi_{\text{base}} = \pi$, the optimal φ-value is zero: once the policy matches its own baseline, intervening on it changes nothing, so the learning signal vanishes at exactly the point of success — while the entropy bonus keeps pushing the policy away from determinism. I suspect this is part of what PTR is for, though I have not implemented enough of the method to make that claim. Both numbers should be reported; they measure different things.</p>
+<h2 id="reconciling-with-the-paper">Reconciling with the paper</h2>
+<p>The paper's Figure 5 sweeps $\sigma \in \{0, 3, 10, 30, 100\}$ at $T = 100$, $\gamma = 0.999$, $M = 1$, 50 seeds per condition, with a budget of 3,000 episodes. At $\sigma = 0$ several baselines match or exceed φ-PPO, as expected — no noise, no variance problem, and $M = 1$ approximation noise costs φ-PPO slightly. At $\sigma = 3$ the ordering reverses: φ-PPO beats all baselines, PPO and REINFORCE both fail, and φ-PPO converges fastest among successful runs. That $\sigma = 3$ cell is what I set out to reproduce.</p>
+<h3 id="matching-the-evaluation-budget">Matching the evaluation budget</h3>
+<p>My first comparison against the paper used a different evaluation budget, which accounts for the
+apparent disagreement.</p>
+<p>The paper's budget is roughly 3,000 episodes. My experiment used 3 million environment steps per arm, which at $T = 100$ is 30,000 PPO episodes — an order of magnitude more. Seeing a few PPO seeds eventually converge, I initially thought I had found a discrepancy with a paper that reports PPO failing.</p>
+<p>Restricted to the paper's 3,000-episode window, none of my PPO seeds converge. The discrepancy was entirely an artifact of my own accounting.</p>
+<p>That said, over the full budget PPO converges on 13/50 seeds, CI [0.16, 0.40]. SkillLuck is presented as an environment that defeats standard credit assignment; in my hands it handicaps it severely but does not defeat it, given 10× the episodes. The most likely explanation is that my PPO baseline is simply stronger than the paper's — batch 32, 4 epochs, GAE $\lambda = 0.95$, entropy bonus, gradient clipping. I want to state this as <em>my baseline may differ</em>, not <em>the paper overstates</em>: both readings are consistent with the evidence and I cannot currently distinguish them.</p>
+<h3 id="the-remaining-gap">The remaining gap</h3>
+<p>The substantive difference is on φ-PPO, and it runs the other way: my implementation is considerably <strong>less</strong> sample-efficient than the paper reports. Within the paper's 3,000-episode window, only a small fraction of my φ-PPO runs converge.</p>
+<p>Several candidate explanations exist, and I would rather enumerate them than pick one.</p>
+<p><strong>PTR is absent.</strong> The paper's full method includes it and its own Combinatorial Lock ablation finds it necessary there. Mine has none. This is a concrete structural difference, though an ablation showing PTR matters on one benchmark does not by itself establish how much of the SkillLuck gap it explains.</p>
+<p><strong>The step accounting differs by 1.5×,</strong> as described above.</p>
+<p><strong>Hyperparameters do not cleanly map.</strong> Table 3 gives $B = 64$, $T_{\text{chunk}} = 128$, learning rate $\eta = 0.1$; I used $B = 32$, full 100-step episodes, and $3\times10^{-3}/1\times10^{-3}$ for actor and critic. The table is headed as covering φ-PPO <em>and</em> the Fork MDP experiments, so I am not confident which values apply to SkillLuck specifically — $\eta = 0.1$ in particular reads as a tabular setting rather than one for an MLP.</p>
+<p><strong>The discount is stated inconsistently.</strong> Section 5.1 and the Figure 5 caption both give $\gamma = 0.999$; Table 3 gives $\gamma = 0.99$. I used 0.999 on the strength of the experimental section. This is exactly the kind of ambiguity that can quietly redirect a reproduction, since $\gamma$ enters the return scale, the noise scale, and the sample complexity $M_{\delta,\epsilon} = \sigma^2/((1-\gamma)^2\delta\epsilon^2)$ simultaneously.</p>
+<p><strong>The antithetic weighting is unspecified,</strong> and given what it did to my estimator, the denominator used for the paired sample is not a detail.</p>
+<p>I do not think the right move is to guess. The counterfactual credit mechanism reproduces and behaves as the theory predicts; the PPO comparison lines up once the budget is matched; the residual φ-PPO gap is a question about the training configuration, and I have asked rather than assumed.</p>
+<h3 id="where-the-reproduction-stands">Where the reproduction stands</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+  <th>Component</th>
+  <th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>SkillLuck environment</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Counterfactual rollout (Eq. 7)</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Common random numbers</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Shapley kernel</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Coalition-size proposal $Q^*$</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Antithetic estimator</td>
+  <td>✓ after correcting the weighting</td>
+</tr>
+<tr>
+  <td>Exact small-$T$ Shapley oracle</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Reference vs. vectorized estimator</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Environment vs. fast simulator</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>φ critic, φ GAE, terminal handling</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>φ advantage normalization (std-only)</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Branch-conditional credit profile (D1/D2)</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Vanilla PPO baseline</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>50-seed comparison</td>
+  <td>✓</td>
+</tr>
+<tr>
+  <td>Prioritized Trajectory Replay</td>
+  <td>✗ not implemented</td>
+</tr>
+<tr>
+  <td>Exact paper training configuration</td>
+  <td>? unresolved</td>
+</tr>
+</tbody>
+</table></div>
+<p>The gap between the last two rows and the rest is the distinction I most want to keep clean. I am reasonably confident the core counterfactual Shapley machinery is reproduced and behaves as intended on SkillLuck. I am <em>not</em> confident that my simplified φ-PPO loop is the loop that produced the paper's sample-efficiency numbers. These are separate claims and are reported separately.</p>
+<h2 id="checks-worth-keeping">Checks worth keeping</h2>
+<p>Two of the errors in this reimplementation produced results that looked correct. The biased antithetic
+estimator returned a stable Monte Carlo estimate that had converged to the wrong value, and the first
+tabulated simulator produced plausible returns from inverted branch codes. Neither raised an exception, and
+neither was visible in a training curve. The checks below are what caught them.</p>
+<p><strong>Build the exact oracle at a small horizon.</strong> Enumerating $2^6$ coalitions is cheap and separates
+bias from variance immediately. Every estimator error here was found this way; none by reading the code.</p>
+<p><strong>Bias does not shrink with more samples.</strong> The $M = 20{,}000$ run looked converged and was wrong.
+When a Monte Carlo estimator disagrees with an oracle at large $M$, the disagreement is the diagnosis, not
+a reason to add samples.</p>
+<p><strong>Turn the noise off to test correctness.</strong> The $\sigma = 3$ sampler check had almost no statistical
+power and would have passed with broken branch logic. At $\sigma = 0$ it was 60× sharper and conclusive.
+Noise belongs in the test of the claim, not in the test of the implementation.</p>
+<p><strong>Signed quantities cancel.</strong> Averaging signed φ across a population containing both branches
+destroyed the signal and produced output that read as a failed reproduction. Absolute values, split by
+branch.</p>
+<p><strong>Identical results across two conditions mean the condition never changed.</strong> Two hyperparameter
+settings cannot produce identical RNG streams, so a bit-identical pair of runs is a fault in the
+experiment harness rather than a null result.</p>
+
+<h2 id="next">Next: Combinatorial Lock</h2>
+<p>The next target is the paper's other training benchmark, <strong>Combinatorial Lock</strong>. It is the
+same method on a second environment, so it continues this reproduction rather than starting a new one.</p>
+<p>SkillLuck is close to a best case for the causal credit story: 2 causal timesteps out of 100, so the sparse-causality variance reduction $k'/T$ is at its most favourable, and the shared-noise cancellation is at its most valuable. Combinatorial Lock inverts the first of these — every action on the optimal path is causal, $k'/T = 1$, and the sparsity benefit vanishes entirely. What remains is the third axis I set aside at the beginning: delayed reward, and the claim (Proposition 3.11) that a counterfactual simulation reaches every timestep in one episode where TD(0) needs $O(T)$.</p>
+<p>That makes it a sharper test than SkillLuck of whether I have understood the method or only one favourable configuration of it — and the paper's own results there show φ-PPO failing without PTR, which is the component I skipped.</p>
+<p>So I plan to start deliberately small: reproduce the environment and inspect the branch-conditional φ credit profile before running any training sweep. If the localization I see in SkillLuck survives where the causal structure is dense rather than sparse, that says considerably more about φ than another successful PPO curve would.</p>
+<h2 id="a-separate-direction">A separate direction: counterfactual credit in preference-based reward learning</h2>
+<p>This is not a continuation of the reproduction. It is a different question, in a different problem
+setting, which the work above suggests a way into. It connects to a <a href="/blog/soft-tac-lunarlander.html">reimplementation of Soft-TAC</a> I wrote up earlier, on preference-based reward learning, and it is at the stage of checking whether the
+idea is viable at all rather than of producing a result.</p>
+<p>In the standard formulation [4], a preference between two trajectory segments is modelled over summed reward, so the scalar total is a sufficient statistic: two segments with the same sum are treated identically regardless of which timesteps produced it. That is the conflation SkillLuck is built around, moved into reward learning. The question I want to look at is whether the per-timestep credit vector is a more useful object of comparison than the return, and there is existing work on step-level explanations in preference learning [5] and on learned timestep weighting [6] to attach it to.</p>
+<p>Shapley efficiency sets the constraint immediately. Since $\sum_t \phi_t = Y - Y^{\mathbf{1}}$, comparing totals recovers the return comparison and nothing more; any advantage has to come from the shape of the vector, and a preference label is one bit. This is early — currently at the stage of checking whether the credit vectors of two matched-return segments differ by more than estimator noise.</p>
+  </div>
+
+  <section class="refs" id="references">
+    <h2>References</h2>
+    <ol>
+      <li>M. Li, K.-Z. Lee, E. Bareinboim. <em>Counterfactual Shapley Credit Assignment.</em> Reinforcement Learning Journal, 2026. <a href="https://arxiv.org/abs/2607.16999" target="_blank" rel="noopener">arXiv:2607.16999</a></li>
+      <li>K.-Z. Lee, D. Plečko, E. Bareinboim. <em>Improving Causal Explanations.</em> Technical Report R-135, Causal AI Lab, Columbia University, May 2026. The origin of the four desiderata, the natural total effect, and counterfactual Shapley values. <a href="https://causalai.net/r135.pdf" target="_blank" rel="noopener">causalai.net/r135.pdf</a></li>
+      <li>Muslimani et al. <em>Towards Improving Reward Design in Reinforcement Learning,</em> 2025 (<a href="https://openreview.net/forum?id=XZBYLXNGjT" target="_blank" rel="noopener">openreview.net</a>); and <em>The Trajectory Alignment Coefficient in Two Acts,</em> 2026 (<a href="https://arxiv.org/abs/2601.16906" target="_blank" rel="noopener">arXiv:2601.16906</a>). The TAC and Soft-TAC papers behind the earlier reimplementation.</li>
+      <li>P. Christiano, J. Leike, T. Brown, M. Martic, S. Legg, D. Amodei. <em>Deep Reinforcement Learning from Human Preferences.</em> NeurIPS, 2017. <a href="https://arxiv.org/abs/1706.03741" target="_blank" rel="noopener">arXiv:1706.03741</a></li>
+      <li>J. Karalus. <em>Tell Me Why: Training Preferences-Based RL with Human Preferences and Step-Level Explanations.</em> Workshop on RL Beyond Rewards, RLC, 2024. <a href="https://arxiv.org/abs/2405.14244" target="_blank" rel="noopener">arXiv:2405.14244</a></li>
+      <li>C. Kim, J. Park, J. Shin, H. Lee, K. Lee, P. Abbeel. <em>Preference Transformer: Modeling Human Preferences using Transformers for RL.</em> ICLR, 2023. <a href="https://arxiv.org/abs/2303.00957" target="_blank" rel="noopener">arXiv:2303.00957</a></li>
+      <li>L. S. Shapley. <em>A Value for n-Person Games.</em> Contributions to the Theory of Games II, Princeton University Press, 1953. <a href="https://doi.org/10.1515/9781400881970-018" target="_blank" rel="noopener">doi:10.1515/9781400881970-018</a></li>
+      <li>S. Lundberg, S.-I. Lee. <em>A Unified Approach to Interpreting Model Predictions.</em> NeurIPS, 2017. The kernel formulation of Shapley values. <a href="https://arxiv.org/abs/1705.07874" target="_blank" rel="noopener">arXiv:1705.07874</a></li>
+      <li>I. Covert, S.-I. Lee. <em>Improving KernelSHAP: Practical Shapley Value Estimation via Linear Regression.</em> AISTATS, 2021. The antithetic sampling reference. <a href="https://arxiv.org/abs/2012.01536" target="_blank" rel="noopener">arXiv:2012.01536</a></li>
+      <li>J. Schulman, F. Wolski, P. Dhariwal, A. Radford, O. Klimov. <em>Proximal Policy Optimization Algorithms,</em> 2017. <a href="https://arxiv.org/abs/1707.06347" target="_blank" rel="noopener">arXiv:1707.06347</a></li>
+    </ol>
+    <p>Code and full experiment outputs: <a href="https://www.kaggle.com/code/pragneshbagary/csca-skillluckmdp" target="_blank" rel="noopener">Kaggle notebook</a>.</p>
+    <p>The implementation and experiments described here were run independently of the paper's authors. Unless otherwise stated, every numerical result in this post comes from the reimplementation and its saved experiment outputs. Descriptions of the paper's method and reported results are attributed to the corresponding section, theorem, or figure.</p>
+  </section>
+
+  <div class="post-foot">
+    <a href="index.html">&lt;- All posts</a>
+    <a href="../index.html">Home -&gt;</a>
+  </div>
+
+</article>
+
+<script>
+  const bar = document.getElementById('progress');
+  const update = () => {
+    const h = document.documentElement;
+    const scrolled = h.scrollTop / (h.scrollHeight - h.clientHeight);
+    bar.style.width = Math.min(100, Math.max(0, scrolled * 100)) + '%';
+  };
+  document.addEventListener('scroll', update, { passive: true });
+  update();
+</script>
+
+</body>
+</html>

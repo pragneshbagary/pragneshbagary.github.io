@@ -94,18 +94,35 @@
 <main class="wrap">
   <div class="posts">
 
+    <a href="counterfactual-shapley-skillluck.html" class="post-card">
+      <div class="post-meta">
+        <span class="tag">reinforcement learning</span>
+        <span>2026</span>
+        <span>~29 min read</span>
+      </div>
+      <p class="post-title">Reimplementing Counterfactual Shapley Credit Assignment</p>
+      <p class="post-excerpt">
+        An independent reimplementation of the SkillLuck experiment from Li, Lee and Bareinboim's paper:
+        the counterfactual rollout, the Shapley estimator, and the PPO loop, built from scratch. An exact
+        oracle at a small horizon exposed a bias in my antithetic sampling that more samples could never
+        have fixed, and a 50-seed comparison separated what reproduced from what did not.
+      </p>
+      <span class="post-more">Read the write-up -></span>
+    </a>
+
     <a href="alignment-fingerprints.html" class="post-card">
       <div class="post-meta">
         <span class="tag">reinforcement learning</span>
         <span>2026</span>
         <span>~13 min read</span>
       </div>
-      <p class="post-title">Alignment fingerprints: a per-dimension decomposition of reward alignment</p>
+      <p class="post-title">TAC fingerprints: a per-dimension decomposition of reward alignment</p>
       <p class="post-excerpt">
-        A single alignment score tells a reward designer that something is wrong, but not what. Decomposing
-        the TAC metric into exact per-dimension Shapley attributions localizes sign errors the scalar cannot
-        register, and the experiments map where the diagnostic works, where it fails silently under feature
-        correlation, and what it can never detect.
+        A single alignment score tells a reward designer that something is wrong, but not what. This post
+        decomposed the TAC metric into exact per-dimension Shapley attributions to localize the error.
+        <b>Corrected September 2026:</b> the localization claim does not hold &mdash; the decomposition
+        flags dimensions of a perfectly aligned reward, and the original result was an artifact of the
+        corruption protocol. The post now carries the evidence and the corrected method.
       </p>
       <span class="post-more">Read the write-up -></span>
     </a>
