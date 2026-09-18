@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TAC Fingerprints: A Per-Dimension Decomposition of Reward Alignment - Pragnesh Bagary</title>
-  <meta name="description" content="Decomposing the Trajectory Alignment Coefficient into exact per-dimension Shapley attributions that localize reward misspecification, with experiments mapping where the diagnostic works and where it fails silently.">
+  <meta name="description" content="An attempt to decompose the Trajectory Alignment Coefficient into exact per-dimension Shapley attributions. Corrected September 2026: the decomposition does not work as a diagnostic for reward misspecification.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -159,14 +159,18 @@
   <div class="article" style="padding-top:1.6rem">
     <div class="correction">
       <span class="corr-tag">Correction &middot; September 2026</span>
-      <p><b>The central claim of this post does not hold.</b> Later work showed that the decomposition
-      assigns negative attributions to correctly specified dimensions of the ground-truth reward itself,
-      so the decision rule this post is built on &mdash; a negative value indicates a sign error &mdash;
-      fires on a reward that is perfectly aligned by construction. The 8-of-8 localization result is an
-      artifact of corrupting one dimension at a time; under a protocol that perturbs every dimension,
-      localization at eight dimensions falls to roughly chance.</p>
-      <p>The original text is left unaltered below. <a href="#what-was-wrong">What was wrong, and what
-      replaced it</a> sets out the evidence and the corrected method.</p>
+      <p><b>When I wrote this post I believed the decomposition worked. After more careful
+      experimentation, I found that it does not, and nothing in it should be read as a working
+      diagnostic.</b> The decision rule the post is built on, that a negative attribution indicates a sign
+      error, fires on the ground-truth reward itself: in five of the six pool and scaling configurations,
+      at least one correctly specified dimension of \(w^{*}\) receives a negative value. Where the rule
+      does find a flipped sign, a plain leave-one-out check finds it too, with no false alarms. The
+      "identifiability boundary" later in the post is the point where that same unreliable statistic
+      changes sign, not a measured limit on what preferences can identify.</p>
+      <p>I also tried a swap-to-reference variant as a possible fix. It did not hold up either, and this
+      line of work is closed.</p>
+      <p>The original text is left unaltered below. <a href="#what-was-wrong">What was wrong</a> sets out
+      the evidence.</p>
     </div>
   </div>
 
@@ -448,158 +452,189 @@
       ground-truth answer key could be constructed.
     </p>
 
-    <h2 id="what-was-wrong">What was wrong, and what replaced it</h2>
+    <h2 id="what-was-wrong">What was wrong</h2>
     <div class="correction">
       <span class="corr-tag">Added September 2026</span>
-      <p>Everything above this heading is the post as originally published in July 2026. This section
-      records what did not survive, and is written from the follow-up experiments rather than from a
-      re-reading of the original argument.</p>
+      <p>Everything above this heading is the post as originally published in July 2026, written when I
+      believed the results supported the method. This section records what did not survive once I tested
+      it more carefully. It is written from the follow-up experiments rather than from a re-reading of the
+      original argument.</p>
     </div>
-
     <h3>The decomposition fails its own null test</h3>
     <p>
       The decision rule in this post is that a clearly negative \(F_k\) indicates a sign error. The test
       that rule never faced is the null one: run the fingerprint on \(w^{*}\) itself, where
       \(\mathrm{TAC} = 1\) exactly and nothing is misspecified. Every dimension should then be
-      non-negative. Recomputing the Shapley values from the coalition tables already saved in the
-      repository:
+      non-negative. The fingerprints of \(w^{*}\) on all six configurations the post ran:
     </p>
     <table class="corr">
       <thead><tr><th>Configuration</th><th>TAC(w*)</th><th>Dimensions with \(F_k &lt; 0\) at \(w^{*}\)</th></tr></thead>
       <tbody>
-        <tr><td>standardized, pool 1</td><td>1.0000</td><td><code>main_eng</code> &minus;0.0087</td></tr>
-        <tr><td>standardized, pool 2</td><td>1.0000</td><td><code>main_eng</code> &minus;0.0150</td></tr>
-        <tr><td>raw features</td><td>1.0000</td><td><code>d_speed</code> &minus;0.0525, <code>d_tilt</code> &minus;0.0096, <code>crash</code> &minus;0.1006</td></tr>
+        <tr><td>standardized, pool 1</td><td>1.0000</td><td><code>main_eng</code> -0.009</td></tr>
+        <tr><td>standardized, pool 2</td><td>1.0000</td><td>none (<code>main_eng</code> +0.006 is still the minimum)</td></tr>
+        <tr><td>standardized, pool 3</td><td>1.0000</td><td><code>main_eng</code> -0.015</td></tr>
+        <tr><td>raw, pool 1</td><td>1.0000</td><td><code>d_speed</code> -0.052, <code>d_tilt</code> -0.010, <code>crash</code> -0.101</td></tr>
+        <tr><td>raw, pool 2</td><td>1.0000</td><td><code>d_speed</code> -0.019, <code>d_tilt</code> -0.017, <code>crash</code> -0.064</td></tr>
+        <tr><td>raw, pool 3</td><td>1.0000</td><td><code>d_speed</code> -0.029, <code>d_tilt</code> -0.030, <code>crash</code> -0.109</td></tr>
       </tbody>
     </table>
     <p>
-      Three of the four configurations reported in this post flag a sign error in a reward that has none.
-      The raw-feature row is the sharper one, because <code>crash</code> receiving &minus;0.1006 at
-      \(w^{*}\) is the same number this post presents, a few sections earlier, as the fingerprint
-      correctly identifying the crash confound. It is not a correction of the univariate baseline. It is
-      the null test failing.
+      Five of the six configurations flag a sign error in a reward that has none, and on raw features the
+      same three dimensions go negative on every pool. <code>crash</code> receiving -0.101 at \(w^{*}\) on
+      pool 1 is the same number this post presents, a few sections earlier, as the fingerprint correctly
+      handling the crash confound. It is not a correction of the univariate baseline. It is the null test
+      failing.
     </p>
     <p>
-      The underlying conceptual error is a conflation. \(F_k\) measures how much the term
-      \(w_k f_k\) changes agreement when added to a coalition. It does not measure whether \(w_k\)
-      has the right sign. A negative \(F_k\) says the term lowers agreement in context, which can happen
-      to a correctly specified dimension whenever it trades off against others; reading it as
-      misspecification requires already knowing what the weight should have been, which is the thing the
-      diagnostic was supposed to tell you.
-    </p>
-
-    <p>
-      One consequence is worth spelling out, because it lands on the case this post singles out as most
-      informative. Flipping <code>main_eng</code> moves the scalar TAC by only 0.003, and the fingerprint
-      still returns <code>main_eng</code> as the minimum, which the post reads as sensitivity the scalar
-      does not have. But <code>main_eng</code> is <em>already</em> the minimum at \(w^{*}\), before any
-      dimension is flipped, on all three standardized pools (\(-0.0087\), \(+0.0056\), \(-0.0150\)).
-      The diagnostic returns that dimension whether or not it has been corrupted, so that case carries no
-      information. The apparent success is a constant default landing on the right answer &mdash; precisely
-      the failure this post correctly diagnoses in the univariate-gap heuristic for omissions, a few
-      sections above, and does not apply to its own headline result.
-    </p>
-
-    <h3>The localization protocol hands over the answer</h3>
-    <p>
-      The 8-of-8 result flips one dimension of \(w^{*}\) and leaves the other seven exactly correct.
-      That is not how a hand-designed reward is wrong. Re-running with every dimension perturbed by
-      15&ndash;30% and one corrupted more severely, at eight dimensions on the real feature matrix, the
-      removal-game attribution used here lands in the range of <b>19&ndash;28%</b> &mdash; near chance for
-      eight dimensions. Dimensionality is not the cause: the same protocol with synthetic independent
-      features and an exact reference scores 100%, and real feature correlation costs only about nine
-      points. The loss comes from the reference, not from the geometry.
-    </p>
-
-    <h3>It is blind to magnitude errors</h3>
-    <p>
-      A removal game asks whether a feature is useful, not whether its weight is the right size. On a seed
-      sweep where the corruption is a magnitude error rather than a sign flip, the attribution identifies
-      the corrupted dimension in <b>0 of 8</b> cases. This is the more likely failure in practice: the
-      Soft-TAC paper notes that the eight components' magnitudes vary considerably. The post tested only
-      the failure mode the method can see.
-    </p>
-
-    <h3>Two structural problems with the game</h3>
-    <p>
-      The empty coalition zeroes every weight, so every trajectory pair ties and Kendall's \(\tau_b\) is
-      \(0/0\). Setting \(v(\emptyset) = 0\) is a convention, not a measurement, which means the
-      efficiency property this post leans on &mdash; that the values sum to TAC &mdash; is splitting a
-      bounded scalar across eight players by fiat. Separately, \(\tau_b\)'s normalizer counts pairs left
-      untied by the reward, and zeroing weights manufactures ties, so the denominator changes with every
-      coalition and each marginal contribution mixes a genuine change in agreement with a rescaling
-      artifact.
-    </p>
-
-    <h3>What replaced it</h3>
-    <p>
-      The repair is to stop removing dimensions and start swapping them: define
-      \(v(S) = \mathrm{TAC}(w \text{ with dimensions outside } S \text{ set to } w^{*})\). The empty
-      coalition is then \(\mathrm{TAC}(w^{*})\) rather than a tie, no ties are manufactured, and the
-      quantity being divided is the alignment deficit \(\mathrm{TAC}(w) - \mathrm{TAC}(w^{*})\), which
-      has a meaning the naive total does not.
+      The negatives come from the low-order coalitions. A Shapley value averages a dimension's marginal
+      contribution over every coalition, including the one in which it enters alone. <code>crash</code>
+      on its own, with its correct weight of -5, disagrees with the labels (about -0.19 under the tau-a
+      form of the score), because crashing trajectories fire the engines less and the raw labels mostly
+      reward low engine use. The attribution averages that context-free verdict in. Two checks confirm
+      this is the mechanism rather than a real disagreement with the labels: refitting the weights inside
+      each coalition, instead of reusing \(w^{*}\)'s, removes every negative, and leave-one-out, which
+      only ever scores a dimension with all the others present, raises no false alarm on \(w^{*}\) on any
+      pool. A negative \(F_k\) says the term points the wrong way when evaluated without the features it
+      is correlated with. It does not say \(w_k\) has the wrong sign.
     </p>
     <p>
-      That method is better but its first results were also overstated, and the same protocol artifact is
-      why. Corrupting a single coordinate makes every other dimension a literal null player, so the
-      attribution is \((0,\dots,\mathrm{TAC}(w) - \mathrm{TAC}(w^{*}),\dots,0)\) exactly, with a
-      perfect margin on any dataset &mdash; an algebraic identity rather than a detection result. Under the
-      all-dimensions-perturbed protocol it localizes correctly about 75&ndash;90% of the time with a good
-      reference, and its accuracy is governed almost entirely by the quality of \(w^{*}\) rather than by
-      dimensionality, feature correlation, or label noise. Below roughly
-      \(\mathrm{TAC}(w^{*}) \approx 0.77\) the alignment deficit inverts sign and the decomposition is
-      explaining a deficit that does not exist, so held-out \(\mathrm{TAC}(w^{*})\) has to be reported
-      as a gate before any attribution is interpreted.
+      One consequence lands on the case this post singles out as most informative. Flipping
+      <code>main_eng</code> moves the scalar TAC by only 0.003, and the fingerprint still returns
+      <code>main_eng</code> as the minimum, which the post reads as sensitivity the scalar does not have.
+      But <code>main_eng</code> is <em>already</em> the minimum at \(w^{*}\), before any dimension is
+      flipped, on all three standardized pools (-0.009, +0.006, -0.015). The diagnostic returns that
+      dimension whether or not it has been corrupted, so that case carries no information: the same
+      constant-default failure the post correctly diagnoses in the univariate-gap heuristic for omissions,
+      and does not apply to its own headline result.
+    </p>
+    <h3>The sign-flip result survives, but it is not evidence of a diagnostic</h3>
+    <p>
+      An obvious objection to the 8-of-8 result is that it flips one dimension and leaves the other seven
+      exactly correct, which is not how a hand-designed reward is wrong. That objection turns out not to
+      be the problem. Re-running this post's own rule on its own \(w^{*}\), with every weight jittered by 15% or 30% and
+      one dimension sign-flipped, gives 8 of 8 on all three standardized pools and 5 of 8 on all three raw
+      pools, the same as the single-flip protocol.
     </p>
     <p>
-      A note on what stands. The feature-scale finding, the identifiability boundary under correlation, and
-      the structural blindness to omitted terms do not depend on the decision rule and are unaffected. The
-      recovery instability &mdash; near-identical TAC at cosine similarity ranging from 0.70 to 0.96 &mdash;
-      also stands, and is the observation from this post I would now treat as the most durable.
+      So the localization numbers stand as numbers. They still do not show a useful diagnostic, for three
+      reasons.
     </p>
-
+    <ul>
+      <li><b>A sign flip is the easiest error there is to see, and a simpler tool sees it better.</b>
+      Leave-one-out (drop one term and rescore) localizes the flipped dimension in 8 of 8 cases on every
+      pool, raw and standardized, with no false alarms on \(w^{*}\). The Shapley rule gets 5 of 8 on raw
+      features, and 2 of 8 on a second, larger LunarLander pool of 480 trajectories. The exact Shapley
+      computation adds cost and false alarms, not detection. (These comparisons use the tau-a form of the
+      score, which gives the same Shapley localization as tau-b on the pools where both were run.)</li>
+      <li><b>The rule has no usable precision.</b> Because it fires on correctly specified dimensions, a
+      negative value on a real reward cannot be told apart from a sign error without already knowing
+      \(w^{*}\), which is the thing the diagnostic was supposed to supply.</li>
+      <li><b>It is blind to magnitude errors by construction.</b> A single-dimension coalition's value
+      depends only on the sign of its weight, since \(\operatorname{sign}(c\,x) = \operatorname{sign}(x)\)
+      for every \(c &gt; 0\), so rescaling a weight leaves those terms of the average unchanged. On a
+      small three-dimensional synthetic check, magnitude corruptions were localized in 0 of 8 seeds. That
+      check was not repeated on LunarLander, but the mechanism does not depend on the data, and magnitude
+      errors are the more likely failure in a hand-designed reward.</li>
+    </ul>
+    <h3>The structural problems are real but are not the cause</h3>
+    <p>
+      Two properties of the game looked like likely culprits at first. Both are real, and neither
+      explains the failures above. Setting \(v(\emptyset) = 0\) is a convention, but changing it is
+      harmless and uninformative: moving \(v(\emptyset)\) by \(\Delta\) shifts every \(F_k\) by exactly
+      \(-\Delta/d\), so no ordering, argmin, or pairwise comparison changes. Tau-b's coalition-dependent
+      normalizer does inflate small coalitions, by about 1.27x for single dimensions and not at all by
+      four, but switching to tau-a, whose denominator is fixed, leaves the negatives in place. A third
+      property matters more for readability: between 50% and 64% of each dimension's per-pair
+      contributions cancel inside its single reported value, so a signed fingerprint entry hides most of
+      what the dimension is doing.
+    </p>
+    <h3>The identifiability boundary is weaker than stated</h3>
+    <p>
+      The boundary is defined as the correlation at which \(F_B\), the attribution to the spurious term,
+      crosses zero. The crossings reproduce: about 0.22, 0.41, 0.60 and 0.69 for spurious weights of 0.5,
+      1, 2 and 4, although the 0.5 curve sits within seed noise of zero from very low correlation, so that
+      crossing is not reliable. But \(F_B\) is the statistic whose sign the null test shows cannot be
+      trusted, so its zero crossing marks where one heuristic stops firing, not a limit on what the
+      preferences can identify.
+    </p>
+    <p>
+      The post's stronger reading, that past the boundary "no diagnostic computed from the same
+      preferences could" separate the spurious reward from a correct one, was argued rather than shown,
+      and the post's own numbers cut against it: across the gridworld sweep the spurious reward scores
+      TAC between 0.82 and 0.90 while \(w^{*}\) scores 1.0, so the preferences do register that it is
+      wrong. What they may not register is <em>which</em> term is wrong, and the post never tested that
+      with anything other than the attribution itself. What survives is qualitative: the attribution to a
+      spurious term drifts from negative to positive as its feature becomes more correlated with a valued
+      one, and it does so without any alarm.
+    </p>
+    <h3>What I tried next, and why it is not a fix either</h3>
+    <p>
+      The natural repair looked like a swap-to-reference game: set the
+      weights outside \(S\) to a reference \(w^{*}\) instead of to zero, so the empty coalition scores
+      \(\mathrm{TAC}(w^{*})\) and the total being divided is the deficit
+      \(\mathrm{TAC}(w) - \mathrm{TAC}(w^{*})\). The construction is cleaner, but it never became a
+      working method.
+    </p>
+    <ul>
+      <li><b>Its best numbers need an exact reference, where it adds nothing.</b> With the true \(w^{*}\)
+      known, it localized 91% of cases on the real feature geometry. But with the true \(w^{*}\) known,
+      comparing \(w\) against it coordinate by coordinate finds the corrupted dimension directly, since
+      the corruptions tested (a factor of -2 or 6) are an order of magnitude larger than the 15-30%
+      jitter.</li>
+      <li><b>With a fitted reference, the only kind a practitioner has, it degrades sharply.</b> It fell
+      to 24 of 32 (75%) even when the fitted reference agreed with the labels at TAC 0.99, and to 17 of 32
+      (53%) with a weaker one. Below a reference TAC of about 0.77 the deficit changes sign and there is
+      nothing left to attribute.</li>
+      <li><b>None of it was run on human preferences.</b> Every label in those experiments came from a
+      synthetic weight vector or a proxy ranking built from trajectory outcomes. The human LunarLander
+      preferences it was meant to be tested on are not public.</li>
+    </ul>
+    <p>
+      I have closed this line of work. No variant of the per-dimension decomposition I tried survived
+      contact with a correct reward, a simpler baseline, and a realistic reference at the same time.
+    </p>
     <h2>Summary of results</h2>
     <div class="correction">
-      <span class="corr-tag">Revised September 2026</span>
+      <span class="corr-tag">Corrected September 2026</span>
       <p>The original version of this section listed the localization result as supported. It is not.
       See <a href="#what-was-wrong">What was wrong</a>; the summary below is the corrected one.</p>
     </div>
     <p>
-      <strong>Retracted.</strong> That exact Shapley attribution of TAC localizes sign-flipped reward
-      dimensions. The 8-of-8 figure came from corrupting one dimension at a time; under an
-      all-dimensions-perturbed protocol the method is near chance at eight dimensions, and it fails its own
-      null test, assigning negative attributions to correctly specified dimensions of \(w^{*}\). The claim
-      that the attribution corrects the univariate crash confound is retracted with it: the negative value
-      on <code>crash</code> is an instance of the null-test failure, not a correction of it.
+      <strong>Retracted.</strong> That exact Shapley attribution of TAC is a diagnostic for misspecified
+      reward dimensions. It flags correctly specified dimensions of \(w^{*}\) in five of six
+      configurations, it is matched or beaten on sign flips by leave-one-out, and it cannot see magnitude
+      errors. The claim that it corrects the univariate crash confound goes with it: the negative value on
+      <code>crash</code> is an instance of the null-test failure. The identifiability boundary is
+      retracted as an identifiability result; it is the zero crossing of the same unreliable statistic.
+      The swap-to-reference game is not a replacement.
     </p>
     <p>
-      <strong>Stands.</strong> The feature-scale finding &mdash; that on raw features the two engine
-      dimensions absorb 0.82 of the attribution mass, so the labeler is mostly ranking by fuel usage while
-      the scalar TAC reads 1.0. The identifiability boundary under correlation, including that the threshold
-      rises with the magnitude of the spurious term and that the failure above it is silent. The structural
-      blindness to omitted terms, which follows from the null-player axiom and does not depend on the
-      decision rule. The failure of the univariate-gap heuristic. That the label-noise robustness is a
+      <strong>Stands, with qualifications.</strong> The feature-scale observation: the raw engine features
+      are summed step counts whose standard deviations are two to three orders of magnitude above the
+      rest (about 128-184 against 0.1-0.85), so the raw-feature labeler is dominated by the engine terms
+      and standardization matters. The 0.82 attribution share the post uses to show this is not a
+      reliable measure of it; it falls to 0.60 when weights are refit inside each coalition, to about
+      0.54 once cancellation across pairs is separated out, and reads 0.95 on a larger pool. The failure
+      of the univariate-gap heuristic for omissions. That the label-noise robustness is a
       \((1 - 2p)\) property of any rank-based method rather than a contribution of this work. That greedy
-      search is the better repair policy on this benchmark.
+      search is the better repair policy on this benchmark. The blindness to omitted terms also stands,
+      though it is close to trivial: an omitted weight gets an attribution of exactly zero, which says no
+      more than reading the weight vector does, and the attribution cannot grade a weight that is merely
+      too small.
     </p>
     <p>
-      <strong>Also blind to magnitude errors.</strong> Not tested in the original post. A removal game asks
-      whether a feature is useful, not whether its weight is the right size; on a magnitude-corruption seed
-      sweep the attribution scores 0 of 8.
-    </p>
-    <p>
-      <strong>Not claimed.</strong> Any conclusion about the fingerprints of learned rewards versus their
-      true recovery. That question stays open, and the recovery instability across pools &mdash; cosine
-      similarity from 0.70 to 0.96 at near-identical TAC &mdash; is the part of this post I would now treat
-      as its most durable observation.
+      <strong>Downgraded.</strong> The recovery observation, that Soft-TAC fits reaching TAC around 0.99
+      sit at cosine similarity 0.70 to 0.96 from \(w^{*}\) across the standardized pools. It rests on one
+      optimizer seed per pool, and it is what one should expect: preferences only constrain a linear
+      reward to a cone of weight vectors, so near-perfect agreement is compatible with a range of
+      directions. It is an observation consistent with that, not a finding of this post.
     </p>
 
     <h2>Code</h2>
     <p>
       Code and data are available at
       <a href="https://github.com/pragneshbagary/alignment-fingerprints" target="_blank" rel="noopener">github.com/pragneshbagary/alignment-fingerprints</a>.
-      The experiments run and reproduce; what changed is the interpretation of what they show, and the
-      repository's README carries the same correction as this post.
+      The experiments run and reproduce; what changed is the interpretation of what they show.
     </p>
 
   </div>
